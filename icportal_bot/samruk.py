@@ -98,7 +98,21 @@ class SamrukClient:
         page.locator('input[name="keywordName"]').fill(keyword, timeout=10000)
         page.locator("button.button--primary.button--bold").last.click(timeout=10000)
         page.wait_for_timeout(4000)
-        return _matches_from_browser_text(keyword, page.locator("body").inner_text(timeout=10000), self.config)[:limit]
+        matches = _matches_from_browser_text(keyword, page.locator("body").inner_text(timeout=10000), self.config)
+        return self._filter_browser_actual_matches(page, matches, limit)
+
+    def _filter_browser_actual_matches(self, page: Any, matches: list[LotMatch], limit: int) -> list[LotMatch]:
+        actual: list[LotMatch] = []
+        for match in matches:
+            page.goto(match.url, wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(2500)
+            text = page.locator("body").inner_text(timeout=10000)
+            if not _is_actual_browser_detail(text, match.code):
+                continue
+            actual.append(match)
+            if len(actual) >= limit:
+                break
+        return actual
 
     def fetch_recent_adverts(self) -> list[dict[str, Any]]:
         adverts: list[dict[str, Any]] = []
@@ -268,7 +282,45 @@ def _browser_description(number: str, block: str) -> str:
 
 
 def _is_open_browser_advert(block: str) -> bool:
-    return "осталось:" in block.lower()
+    lowered = block.lower()
+    return "осталось:" in lowered and not _has_inactive_status(lowered)
+
+
+def _is_actual_browser_detail(text: str, advert_id: str) -> bool:
+    status = _browser_detail_status(text, advert_id)
+    if not status:
+        return False
+    lowered = status.lower()
+    return "опублик" in lowered and not _has_inactive_status(lowered)
+
+
+def _browser_detail_status(text: str, advert_id: str) -> str:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    marker = f"№ {advert_id}"
+    indexes = [index for index, line in enumerate(lines) if line == marker]
+    if not indexes:
+        return ""
+    index = indexes[-1]
+    if index + 2 >= len(lines):
+        return ""
+    return lines[index + 2]
+
+
+def _has_inactive_status(text: str) -> bool:
+    inactive_statuses = (
+        "отменен",
+        "отменён",
+        "отменена",
+        "отменено",
+        "завершен",
+        "завершён",
+        "завершена",
+        "завершено",
+        "итоги",
+        "договор заключен",
+        "договор заключён",
+    )
+    return any(status in text for status in inactive_statuses)
 
 
 def _active_keywords(keywords: list[str]) -> list[str]:
