@@ -62,6 +62,8 @@ https://zakup.gov.kz/api/core/api/public/lots/
 
 Так GovZakup не будет дублировать лоты площадки SKK/Samruk.
 
+Для `max_keyword_checks` значение `0` означает "проверять весь словарь".
+
 ## Telegram
 
 В `.env` укажите:

@@ -66,7 +66,7 @@ class SamrukClient:
             browser = playwright.chromium.launch(headless=True)
             page = browser.new_page(locale="ru-RU")
             try:
-                for keyword in self.keywords[: self.config.max_keyword_checks]:
+                for keyword in _limited_keywords(self.keywords, self.config.max_keyword_checks):
                     matches.extend(self._search_browser_keyword_on_page(page, keyword, self.config.max_details))
                     if len(matches) >= self.config.max_details:
                         break
@@ -280,6 +280,12 @@ def _active_keywords(keywords: list[str]) -> list[str]:
             continue
         result.append(clean)
     return result
+
+
+def _limited_keywords(keywords: list[str], limit: int) -> list[str]:
+    if limit <= 0:
+        return keywords
+    return keywords[:limit]
 
 
 def _advert_id(advert: dict[str, Any]) -> str:
