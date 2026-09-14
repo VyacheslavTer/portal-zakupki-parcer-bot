@@ -41,6 +41,9 @@
       "программы",
       "лицензия"
     ],
+    "excluded_phrases": [
+      "камера шины"
+    ],
     "max_results_per_keyword": 20,
     "max_pages_per_keyword": 5,
     "scan_open_pages": 5,

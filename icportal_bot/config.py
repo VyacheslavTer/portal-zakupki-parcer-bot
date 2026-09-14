@@ -52,6 +52,7 @@ class GovZakupConfig:
 @dataclass(frozen=True)
 class SearchConfig:
     keywords: list[str]
+    excluded_phrases: list[str]
     max_results_per_keyword: int
     max_pages_per_keyword: int
     scan_open_pages: int
@@ -124,6 +125,7 @@ def load_config(path: Path | None = None) -> Config:
         ),
         search=SearchConfig(
             keywords=[str(keyword) for keyword in search["keywords"]],
+            excluded_phrases=[str(phrase) for phrase in search.get("excluded_phrases", [])],
             max_results_per_keyword=int(search.get("max_results_per_keyword", 20)),
             max_pages_per_keyword=int(search.get("max_pages_per_keyword", 5)),
             scan_open_pages=int(search.get("scan_open_pages", 5)),

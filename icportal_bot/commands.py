@@ -21,6 +21,7 @@ def run() -> None:
         matches.extend(_safe_search_samruk(config))
         matches.extend(_safe_search_erg(config))
         matches.extend(_safe_search_govzakup(config))
+        matches = _filter_excluded_phrases(matches, config.search.excluded_phrases)
         new_matches = store.filter_new(matches)
         if not new_matches:
             if config.telegram.enabled:
@@ -79,6 +80,24 @@ def _erg_status_text(config) -> str:
 
 def _format_statuses(statuses: list[int]) -> str:
     return ",".join(str(status) for status in statuses)
+
+
+def _filter_excluded_phrases(matches: list[LotMatch], excluded_phrases: list[str]) -> list[LotMatch]:
+    phrases = [_normalize_text(phrase) for phrase in excluded_phrases if phrase.strip()]
+    if not phrases:
+        return matches
+    result: list[LotMatch] = []
+    for match in matches:
+        haystack = _normalize_text("\n".join((match.title, match.description, match.code, match.keyword)))
+        if any(phrase in haystack for phrase in phrases):
+            print(f"Исключено по минус-фразе: {match.source} {match.code or match.source_id} {match.title}", flush=True)
+            continue
+        result.append(match)
+    return result
+
+
+def _normalize_text(value: str) -> str:
+    return " ".join(value.casefold().split())
 
 
 def _safe_search_samruk(config) -> list[LotMatch]:
