@@ -1,0 +1,43 @@
+{
+  "portal": {
+    "url": "https://icportal.kz/",
+    "api_url": "https://icportal.kz/api/purchases"
+  },
+  "samruk": {
+    "enabled": false,
+    "mode": "http",
+    "url": "https://zakup.sk.kz/",
+    "search_url": "https://zakup.sk.kz/ru/search?status=опубликовано&sort=date_desc",
+    "detail_api_url": "https://zakup.sk.kz/eprocsearch/api/external/4dv3rts",
+    "max_pages": 3,
+    "max_details": 50,
+    "max_keyword_checks": 25,
+    "request_timeout_seconds": 30,
+    "delay_between_requests_seconds": 0.5
+  },
+  "erg": {
+    "enabled": false,
+    "config_path": "erg_parser/config.json",
+    "max_keyword_checks": 25
+  },
+  "search": {
+    "keywords": [
+      "Photoshop",
+      "Autodesk",
+      "Adobe",
+      "Acrobat",
+      "подписка",
+      "программы",
+      "лицензия"
+    ],
+    "max_results_per_keyword": 20,
+    "max_pages_per_keyword": 5,
+    "scan_open_pages": 5,
+    "status": "open"
+  },
+  "notifications": {
+    "telegram_enabled": false,
+    "telegram_bot_token_env": "TELEGRAM_BOT_TOKEN",
+    "telegram_chat_id_env": "TELEGRAM_CHAT_ID"
+  }
+}
