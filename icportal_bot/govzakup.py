@@ -27,7 +27,7 @@ class GovZakupClient:
 
     def search(self) -> list[LotMatch]:
         matches: list[LotMatch] = []
-        for keyword in self.keywords[: self.config.max_keyword_checks]:
+        for keyword in _limited_keywords(self.keywords, self.config.max_keyword_checks):
             matches.extend(self.search_keyword(keyword))
             time.sleep(self.config.delay_between_requests_seconds)
         return _dedupe(matches)
@@ -99,6 +99,12 @@ def _active_keywords(keywords: list[str]) -> list[str]:
             continue
         active.append(normalized_keyword)
     return active
+
+
+def _limited_keywords(keywords: list[str], limit: int) -> list[str]:
+    if limit <= 0:
+        return keywords
+    return keywords[:limit]
 
 
 def _is_actual_lot(row: dict[str, Any]) -> bool:

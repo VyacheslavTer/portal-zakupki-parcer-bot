@@ -18,7 +18,7 @@
   "erg": {
     "enabled": false,
     "config_path": "erg_parser/config.json",
-    "max_keyword_checks": 25
+    "max_keyword_checks": 0
   },
   "govzakup": {
     "enabled": false,
@@ -27,7 +27,7 @@
     "excluded_system_ids": [],
     "page_size": 50,
     "max_pages": 0,
-    "max_keyword_checks": 200,
+    "max_keyword_checks": 0,
     "request_timeout_seconds": 30,
     "delay_between_requests_seconds": 0.5
   },
