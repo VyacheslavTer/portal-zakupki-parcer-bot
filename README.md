@@ -1,6 +1,6 @@
 # ICPortal Parser
 
-Бот для мониторинга `icportal.kz` по ключевым словам и отправки новых совпадений в Telegram.
+Бот для мониторинга закупочных порталов по ключевым словам и отправки новых совпадений в Telegram.
 
 ## Установка
 
@@ -21,6 +21,7 @@ Copy-Item .env.example .env
 
 ```text
 https://icportal.kz/api/purchases
+https://zakup.gov.kz/api/core/api/public/lots/
 ```
 
 Браузер не открывается. Если API когда-нибудь начнет требовать авторизацию, можно будет добавить cookie/token, но сейчас публичный ответ уже содержит нужные данные.
@@ -46,6 +47,20 @@ https://icportal.kz/api/purchases
 ```json
 "status": null
 ```
+
+Дополнительные источники включаются отдельными блоками в `config.json`:
+
+- `samruk` — публичный поиск Samruk-Kazyna, в боевом режиме оставляет закупки с отметкой "Осталось".
+- `erg` — отдельный ERG-парсер через `erg_parser/config.json`.
+- `govzakup` — публичный поиск `zakup.gov.kz`, оставляет опубликованные лоты с неистекшей датой приема заявок.
+
+Если отдельный Samruk-парсер включен, для `govzakup` можно поставить:
+
+```json
+"excluded_system_ids": [3]
+```
+
+Так GovZakup не будет дублировать лоты площадки SKK/Samruk.
 
 ## Telegram
 

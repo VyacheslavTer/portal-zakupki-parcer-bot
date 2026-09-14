@@ -37,6 +37,18 @@ class ErgBridgeConfig:
 
 
 @dataclass(frozen=True)
+class GovZakupConfig:
+    enabled: bool
+    url: str
+    lots_api_url: str
+    excluded_system_ids: list[int]
+    max_pages: int
+    max_keyword_checks: int
+    request_timeout_seconds: float
+    delay_between_requests_seconds: float
+
+
+@dataclass(frozen=True)
 class SearchConfig:
     keywords: list[str]
     max_results_per_keyword: int
@@ -57,6 +69,7 @@ class Config:
     portal: PortalConfig
     samruk: SamrukConfig
     erg: ErgBridgeConfig
+    govzakup: GovZakupConfig
     search: SearchConfig
     telegram: TelegramConfig
 
@@ -71,6 +84,7 @@ def load_config(path: Path | None = None) -> Config:
     portal = raw["portal"]
     samruk = raw.get("samruk", {})
     erg = raw.get("erg", {})
+    govzakup = raw.get("govzakup", {})
     search = raw["search"]
     notifications = raw["notifications"]
 
@@ -95,6 +109,16 @@ def load_config(path: Path | None = None) -> Config:
             enabled=bool(erg.get("enabled", False)),
             config_path=erg.get("config_path", "erg_parser/config.json"),
             max_keyword_checks=int(erg.get("max_keyword_checks", 25)),
+        ),
+        govzakup=GovZakupConfig(
+            enabled=bool(govzakup.get("enabled", False)),
+            url=govzakup.get("url", "https://zakup.gov.kz/"),
+            lots_api_url=govzakup.get("lots_api_url", "https://zakup.gov.kz/api/core/api/public/lots/"),
+            excluded_system_ids=[int(system_id) for system_id in govzakup.get("excluded_system_ids", [])],
+            max_pages=int(govzakup.get("max_pages", 3)),
+            max_keyword_checks=int(govzakup.get("max_keyword_checks", 25)),
+            request_timeout_seconds=float(govzakup.get("request_timeout_seconds", 30)),
+            delay_between_requests_seconds=float(govzakup.get("delay_between_requests_seconds", 0.5)),
         ),
         search=SearchConfig(
             keywords=[str(keyword) for keyword in search["keywords"]],

@@ -5,6 +5,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 
 from .config import ROOT, load_config
+from .govzakup import diagnose_govzakup_keyword, search_govzakup
 from .models import LotMatch
 from .notifier import format_matches, get_telegram_chat_ids, send_telegram, send_telegram_text
 from .portal import search_portal
@@ -19,6 +20,7 @@ def run() -> None:
         matches = search_portal(config)
         matches.extend(_safe_search_samruk(config))
         matches.extend(_safe_search_erg(config))
+        matches.extend(_safe_search_govzakup(config))
         new_matches = store.filter_new(matches)
         if not new_matches:
             if config.telegram.enabled:
@@ -42,12 +44,14 @@ def _empty_report(config) -> str:
     icportal_status = _icportal_status_text(config)
     samruk_status = "действующие закупки с отметкой \"Осталось\"" if config.samruk.enabled else "выключен"
     erg_status = _erg_status_text(config) if config.erg.enabled else "выключен"
+    govzakup_status = "актуальные опубликованные лоты" if config.govzakup.enabled else "выключен"
     return (
         "Проверка порталов закупок выполнена.\n"
         f"Время: {checked_at}\n"
         f"ICPortal: {icportal_status}\n"
         f"Samruk: {samruk_status}\n"
         f"ERG: {erg_status}\n"
+        f"GovZakup: {govzakup_status}\n"
         "Новых совпадений по ключевым словам не найдено."
     )
 
@@ -109,6 +113,18 @@ def _safe_search_erg(config) -> list[LotMatch]:
         return []
 
 
+def _safe_search_govzakup(config) -> list[LotMatch]:
+    if not config.govzakup.enabled:
+        return []
+    try:
+        return search_govzakup(config)
+    except (HTTPError, URLError, TimeoutError) as error:
+        print(f"GovZakup: {error}, источник временно пропущен.", flush=True)
+    except Exception as error:
+        print(f"GovZakup: {error}, источник временно пропущен.", flush=True)
+    return []
+
+
 def _erg_match_to_lot_match(match) -> LotMatch:
     return LotMatch(
         keyword=match.keyword,
@@ -136,6 +152,15 @@ def samruk_diagnose(advert_id: str | None = None, keyword: str | None = None) ->
         return
     rows = diagnose_samruk(config)
     _print_samruk_rows(rows)
+
+
+def govzakup_diagnose(keyword: str) -> None:
+    config = load_config()
+    matches = diagnose_govzakup_keyword(config, keyword)
+    if not matches:
+        print("GovZakup: актуальные лоты не найдены.")
+        return
+    print(format_matches(matches, ascii_safe=True))
 
 
 def _print_samruk_rows(rows: list[dict]) -> None:

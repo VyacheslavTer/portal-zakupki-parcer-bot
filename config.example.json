@@ -20,6 +20,16 @@
     "config_path": "erg_parser/config.json",
     "max_keyword_checks": 25
   },
+  "govzakup": {
+    "enabled": false,
+    "url": "https://zakup.gov.kz/",
+    "lots_api_url": "https://zakup.gov.kz/api/core/api/public/lots/",
+    "excluded_system_ids": [],
+    "max_pages": 3,
+    "max_keyword_checks": 25,
+    "request_timeout_seconds": 30,
+    "delay_between_requests_seconds": 0.5
+  },
   "search": {
     "keywords": [
       "Photoshop",

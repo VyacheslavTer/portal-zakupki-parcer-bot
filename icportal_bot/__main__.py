@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from .commands import run, samruk_diagnose, telegram_chat_id, telegram_test
+from .commands import govzakup_diagnose, run, samruk_diagnose, telegram_chat_id, telegram_test
 
 
 def main() -> None:
@@ -15,6 +15,8 @@ def main() -> None:
     samruk_parser = subparsers.add_parser("samruk-diagnose", help="Show latest Samruk adverts parsed from public search.")
     samruk_parser.add_argument("--id", help="Check Samruk detail API for a known advert id.")
     samruk_parser.add_argument("--keyword", help="Check Samruk advert search API for a keyword.")
+    govzakup_parser = subparsers.add_parser("govzakup-diagnose", help="Show actual GovZakup lots for a keyword.")
+    govzakup_parser.add_argument("--keyword", required=True, help="Check GovZakup public lots search for a keyword.")
     subparsers.add_parser("telegram-chat-id", help="Show chat ids from recent Telegram bot messages.")
     subparsers.add_parser("telegram-test", help="Send a test Telegram message.")
 
@@ -23,6 +25,8 @@ def main() -> None:
         run()
     elif args.command == "samruk-diagnose":
         samruk_diagnose(args.id, args.keyword)
+    elif args.command == "govzakup-diagnose":
+        govzakup_diagnose(args.keyword)
     elif args.command == "telegram-chat-id":
         telegram_chat_id()
     elif args.command == "telegram-test":
