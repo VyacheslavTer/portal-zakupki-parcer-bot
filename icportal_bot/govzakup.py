@@ -5,7 +5,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 from .config import Config
@@ -34,12 +34,15 @@ class GovZakupClient:
 
     def search_keyword(self, keyword: str) -> list[LotMatch]:
         matches: list[LotMatch] = []
-        for page in range(self.config.max_pages):
+        page = 0
+        next_url: str | None = None
+        while self.config.max_pages <= 0 or page < self.config.max_pages:
             try:
-                rows = self.fetch_lots(keyword, page)
+                payload = self.fetch_lot_page(keyword, page, next_url)
             except (HTTPError, URLError, TimeoutError) as error:
                 print(f"GovZakup lots {keyword!r} page={page}: {error}", flush=True)
                 break
+            rows = payload.get("results") if isinstance(payload, dict) else None
             if not rows:
                 break
             for row in rows:
@@ -52,16 +55,30 @@ class GovZakupClient:
                     matches.append(match)
                 if len(matches) >= self.max_results_per_keyword:
                     return matches
+            next_url = payload.get("next") if isinstance(payload, dict) else None
+            if not _is_safe_next_url(next_url):
+                break
+            page += 1
         return matches
 
     def fetch_lots(self, keyword: str, page: int = 0) -> list[dict[str, Any]]:
-        params = {"q": keyword, "limit": 50, "offset": page * 50}
-        url = f"{self.config.lots_api_url}?{urlencode(params)}"
+        payload = self.fetch_lot_page(keyword, page)
+        rows = payload.get("results") if isinstance(payload, dict) else None
+        return rows if isinstance(rows, list) else []
+
+    def fetch_lot_page(self, keyword: str, page: int = 0, url: str | None = None) -> dict[str, Any]:
+        if url is None:
+            params = {
+                "q": keyword,
+                "limit": self.config.page_size,
+                "offset": page * self.config.page_size,
+                "offer_end_date__gte": datetime.now(timezone.utc).isoformat(),
+            }
+            url = f"{self.config.lots_api_url}?{urlencode(params)}"
         request = Request(url, headers=self.headers, method="GET")
         with urlopen(request, timeout=self.config.request_timeout_seconds) as response:
             payload = json.loads(response.read().decode("utf-8", errors="replace"))
-        rows = payload.get("results") if isinstance(payload, dict) else None
-        return rows if isinstance(rows, list) else []
+        return payload if isinstance(payload, dict) else {}
 
 
 def search_govzakup(config: Config) -> list[LotMatch]:
@@ -101,6 +118,13 @@ def _system_id(row: dict[str, Any]) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _is_safe_next_url(url: object) -> bool:
+    if not url:
+        return False
+    parsed = urlparse(str(url))
+    return parsed.scheme == "https" and parsed.netloc == "zakup.gov.kz"
 
 
 def _match_from_lot(keyword: str, row: dict[str, Any]) -> LotMatch | None:

@@ -42,6 +42,7 @@ class GovZakupConfig:
     url: str
     lots_api_url: str
     excluded_system_ids: list[int]
+    page_size: int
     max_pages: int
     max_keyword_checks: int
     request_timeout_seconds: float
@@ -115,6 +116,7 @@ def load_config(path: Path | None = None) -> Config:
             url=govzakup.get("url", "https://zakup.gov.kz/"),
             lots_api_url=govzakup.get("lots_api_url", "https://zakup.gov.kz/api/core/api/public/lots/"),
             excluded_system_ids=[int(system_id) for system_id in govzakup.get("excluded_system_ids", [])],
+            page_size=int(govzakup.get("page_size", 50)),
             max_pages=int(govzakup.get("max_pages", 3)),
             max_keyword_checks=int(govzakup.get("max_keyword_checks", 25)),
             request_timeout_seconds=float(govzakup.get("request_timeout_seconds", 30)),

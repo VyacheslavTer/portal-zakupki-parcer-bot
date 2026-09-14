@@ -25,7 +25,8 @@
     "url": "https://zakup.gov.kz/",
     "lots_api_url": "https://zakup.gov.kz/api/core/api/public/lots/",
     "excluded_system_ids": [],
-    "max_pages": 3,
+    "page_size": 50,
+    "max_pages": 0,
     "max_keyword_checks": 200,
     "request_timeout_seconds": 30,
     "delay_between_requests_seconds": 0.5
