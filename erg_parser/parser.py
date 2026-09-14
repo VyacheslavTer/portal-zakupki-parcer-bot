@@ -339,7 +339,7 @@ def match_from_row(keyword: str, row: dict[str, Any], page_url: str) -> Match:
         keyword=keyword,
         number=number,
         title=title,
-        url=page_url,
+        url=competition_url(page_url, auction_id),
         description=format_row_description(row),
     )
 
@@ -396,6 +396,12 @@ def format_matches(matches: list[Match]) -> str:
         lines.append(match.url)
         lines.append(match.description)
     return "\n".join(lines)
+
+
+def competition_url(page_url: str, auction_id: str) -> str:
+    if not auction_id:
+        return page_url
+    return f"{page_url.rstrip('/')}/{auction_id}/competition-common-info"
 
 
 def send_telegram(config: Config, text: str) -> None:
