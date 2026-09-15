@@ -7,7 +7,7 @@ import sqlite3
 import sys
 import time
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -157,6 +157,8 @@ class ErgClient:
             }
             rows = self.safe_get_auctions(params)
             for row in dedupe_rows(rows):
+                if not is_active_row(row, self.config):
+                    continue
                 match = match_from_row(keyword, row, self.config.page_url)
                 detail = self.get_detail(row)
                 if detail:
@@ -173,6 +175,8 @@ class ErgClient:
         matches: list[Match] = []
         detail_candidates: list[dict[str, Any]] = []
         for row in dedupe_rows(rows):
+            if not is_active_row(row, self.config):
+                continue
             keyword = find_keyword(self.keywords, row_haystack(row))
             if keyword:
                 matches.append(match_from_row(keyword, row, self.config.page_url))
@@ -325,6 +329,17 @@ def find_keyword(keywords: list[str], text: str) -> str | None:
     return next((keyword for keyword in keywords if keyword.lower() in lowered), None)
 
 
+def is_active_row(row: dict[str, Any], config: Config) -> bool:
+    try:
+        status = int(row.get("STATUS"))
+    except (TypeError, ValueError):
+        return False
+    if status not in config.statuses:
+        return False
+    end_date = parse_date(row.get("CO_TAKING_END_DATE_1") or row.get("CO_TACKING_END_DATE_2"))
+    return end_date is None or end_date >= date.today()
+
+
 def match_from_row(keyword: str, row: dict[str, Any], page_url: str) -> Match:
     auction_id = clean_text(row.get("ID"))
     number = clean_text(row.get("NUM"))
@@ -465,6 +480,23 @@ def clean_text(value: Any) -> str:
 
 def date_only(value: Any) -> str:
     return clean_text(value).split("T", 1)[0]
+
+
+def parse_date(value: Any) -> date | None:
+    text = clean_text(value)
+    if not text:
+        return None
+    text = text.split("T", 1)[0]
+    try:
+        return date.fromisoformat(text)
+    except ValueError:
+        pass
+    for fmt in ("%d.%m.%Y", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return None
 
 
 if __name__ == "__main__":
