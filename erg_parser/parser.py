@@ -152,6 +152,7 @@ class ErgClient:
         for keyword in self.keywords:
             params: dict[str, Any] = {
                 "EstmcPosName": keyword,
+                "AuStatus": ",".join(str(status) for status in self.config.statuses),
                 "PublishDateFrom": start_date.isoformat(),
                 "PublishDateTo": end_date.isoformat(),
             }
