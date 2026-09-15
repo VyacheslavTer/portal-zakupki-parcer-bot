@@ -50,6 +50,18 @@ class GovZakupConfig:
 
 
 @dataclass(frozen=True)
+class MitworkConfig:
+    enabled: bool
+    url: str
+    buys_url: str
+    page_size: int
+    max_pages: int
+    max_keyword_checks: int
+    request_timeout_seconds: float
+    delay_between_requests_seconds: float
+
+
+@dataclass(frozen=True)
 class SearchConfig:
     keywords: list[str]
     excluded_phrases: list[str]
@@ -72,6 +84,7 @@ class Config:
     samruk: SamrukConfig
     erg: ErgBridgeConfig
     govzakup: GovZakupConfig
+    mitwork: MitworkConfig
     search: SearchConfig
     telegram: TelegramConfig
 
@@ -87,6 +100,7 @@ def load_config(path: Path | None = None) -> Config:
     samruk = raw.get("samruk", {})
     erg = raw.get("erg", {})
     govzakup = raw.get("govzakup", {})
+    mitwork = raw.get("mitwork", {})
     search = raw["search"]
     notifications = raw["notifications"]
 
@@ -122,6 +136,16 @@ def load_config(path: Path | None = None) -> Config:
             max_keyword_checks=int(govzakup.get("max_keyword_checks", 0)),
             request_timeout_seconds=float(govzakup.get("request_timeout_seconds", 30)),
             delay_between_requests_seconds=float(govzakup.get("delay_between_requests_seconds", 0.5)),
+        ),
+        mitwork=MitworkConfig(
+            enabled=bool(mitwork.get("enabled", False)),
+            url=mitwork.get("url", "https://eep.mitwork.kz/"),
+            buys_url=mitwork.get("buys_url", "https://eep.mitwork.kz/ru/publics/buys"),
+            page_size=int(mitwork.get("page_size", 50)),
+            max_pages=int(mitwork.get("max_pages", 3)),
+            max_keyword_checks=int(mitwork.get("max_keyword_checks", 0)),
+            request_timeout_seconds=float(mitwork.get("request_timeout_seconds", 30)),
+            delay_between_requests_seconds=float(mitwork.get("delay_between_requests_seconds", 0.5)),
         ),
         search=SearchConfig(
             keywords=[str(keyword) for keyword in search["keywords"]],

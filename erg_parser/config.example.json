@@ -24,6 +24,9 @@
     "software",
     "программ"
   ],
+  "excluded_phrases": [
+    "камера шины"
+  ],
   "request_timeout_seconds": 30,
   "detail_timeout_seconds": 15,
   "delay_between_requests_seconds": 0.5,

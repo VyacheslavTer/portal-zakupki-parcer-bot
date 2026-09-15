@@ -31,6 +31,7 @@ class Config:
     search_mode: str
     publish_date_days: int
     keywords: list[str]
+    excluded_phrases: list[str]
     request_timeout_seconds: float
     detail_timeout_seconds: float
     delay_between_requests_seconds: float
@@ -49,6 +50,7 @@ class Config:
             search_mode=self.search_mode,
             publish_date_days=self.publish_date_days,
             keywords=keywords,
+            excluded_phrases=self.excluded_phrases,
             request_timeout_seconds=self.request_timeout_seconds,
             detail_timeout_seconds=self.detail_timeout_seconds,
             delay_between_requests_seconds=self.delay_between_requests_seconds,
@@ -122,6 +124,7 @@ def load_config(path: Path) -> Config:
         search_mode=raw.get("search_mode", "server_keywords"),
         publish_date_days=int(raw.get("publish_date_days", 31)),
         keywords=[str(keyword) for keyword in raw["keywords"]],
+        excluded_phrases=[str(phrase) for phrase in raw.get("excluded_phrases", [])],
         request_timeout_seconds=float(raw.get("request_timeout_seconds", 30)),
         detail_timeout_seconds=float(raw.get("detail_timeout_seconds", 15)),
         delay_between_requests_seconds=float(raw.get("delay_between_requests_seconds", 0.5)),
@@ -140,10 +143,10 @@ class ErgClient:
 
     def search(self) -> list[Match]:
         if self.config.search_mode == "server_keywords":
-            return self.search_server_keywords()
+            return filter_excluded_phrases(self.search_server_keywords(), self.config.excluded_phrases)
         if self.config.search_mode != "active_local":
             raise ValueError("search_mode must be server_keywords or active_local")
-        return self.search_active_local()
+        return filter_excluded_phrases(self.search_active_local(), self.config.excluded_phrases)
 
     def search_server_keywords(self) -> list[Match]:
         matches: list[Match] = []
@@ -328,6 +331,24 @@ def detail_haystack(detail: dict[str, Any]) -> str:
 def find_keyword(keywords: list[str], text: str) -> str | None:
     lowered = text.lower()
     return next((keyword for keyword in keywords if keyword.lower() in lowered), None)
+
+
+def filter_excluded_phrases(matches: list[Match], excluded_phrases: list[str]) -> list[Match]:
+    phrases = [normalize_text(phrase) for phrase in excluded_phrases if phrase.strip()]
+    if not phrases:
+        return matches
+    result: list[Match] = []
+    for match in matches:
+        haystack = normalize_text("\n".join((match.title, match.description, match.number, match.keyword)))
+        if any(phrase in haystack for phrase in phrases):
+            print(f"ERG: исключено по минус-фразе: {match.number} {match.title}", flush=True)
+            continue
+        result.append(match)
+    return result
+
+
+def normalize_text(value: str) -> str:
+    return " ".join(value.casefold().split())
 
 
 def is_active_row(row: dict[str, Any], config: Config) -> bool:

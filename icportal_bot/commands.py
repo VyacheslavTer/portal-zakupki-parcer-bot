@@ -6,6 +6,7 @@ from urllib.error import HTTPError, URLError
 
 from .config import ROOT, load_config
 from .govzakup import diagnose_govzakup_keyword, search_govzakup
+from .mitwork import diagnose_mitwork_keyword, search_mitwork
 from .models import LotMatch
 from .notifier import format_matches, get_telegram_chat_ids, send_telegram, send_telegram_text
 from .portal import search_portal
@@ -20,6 +21,7 @@ def run() -> None:
         matches = search_portal(config)
         matches.extend(_safe_search_samruk(config))
         matches.extend(_safe_search_erg(config))
+        matches.extend(_safe_search_mitwork(config))
         matches.extend(_safe_search_govzakup(config))
         matches = _filter_excluded_phrases(matches, config.search.excluded_phrases)
         new_matches = store.filter_new(matches)
@@ -46,12 +48,14 @@ def _empty_report(config) -> str:
     samruk_status = "действующие закупки с отметкой \"Осталось\"" if config.samruk.enabled else "выключен"
     erg_status = _erg_status_text(config) if config.erg.enabled else "выключен"
     govzakup_status = "актуальные опубликованные лоты" if config.govzakup.enabled else "выключен"
+    mitwork_status = "родные активные объявления MITWORK" if config.mitwork.enabled else "выключен"
     return (
         "Проверка порталов закупок выполнена.\n"
         f"Время: {checked_at}\n"
         f"ICPortal: {icportal_status}\n"
         f"Samruk: {samruk_status}\n"
         f"ERG: {erg_status}\n"
+        f"Mitwork: {mitwork_status}\n"
         f"GovZakup: {govzakup_status}\n"
         "Новых совпадений по ключевым словам не найдено."
     )
@@ -144,6 +148,18 @@ def _safe_search_govzakup(config) -> list[LotMatch]:
     return []
 
 
+def _safe_search_mitwork(config) -> list[LotMatch]:
+    if not config.mitwork.enabled:
+        return []
+    try:
+        return search_mitwork(config)
+    except (HTTPError, URLError, TimeoutError) as error:
+        print(f"Mitwork: {error}, источник временно пропущен.", flush=True)
+    except Exception as error:
+        print(f"Mitwork: {error}, источник временно пропущен.", flush=True)
+    return []
+
+
 def _erg_match_to_lot_match(match) -> LotMatch:
     return LotMatch(
         keyword=match.keyword,
@@ -178,6 +194,15 @@ def govzakup_diagnose(keyword: str) -> None:
     matches = diagnose_govzakup_keyword(config, keyword)
     if not matches:
         print("GovZakup: актуальные лоты не найдены.")
+        return
+    print(format_matches(matches, ascii_safe=True))
+
+
+def mitwork_diagnose(keyword: str) -> None:
+    config = load_config()
+    matches = diagnose_mitwork_keyword(config, keyword)
+    if not matches:
+        print("Mitwork: актуальные объявления не найдены.")
         return
     print(format_matches(matches, ascii_safe=True))
 
