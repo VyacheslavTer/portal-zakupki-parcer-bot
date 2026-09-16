@@ -59,7 +59,7 @@ class MitworkClient:
         if matches:
             return matches
         for buy_id, detail in self.iter_active_details():
-            if keyword.casefold() not in _content_haystack(detail).casefold():
+            if not _keyword_matches(keyword, _content_haystack(detail)):
                 continue
             match = _match_from_detail(keyword, buy_id, detail, self.config.url)
             if match is not None:
@@ -151,7 +151,7 @@ def _match_from_detail(keyword: str, buy_id: str, text: str, base_url: str) -> L
     if not title:
         return None
     haystack = _content_haystack(text).casefold()
-    if keyword.casefold() not in haystack:
+    if not _keyword_matches(keyword, haystack):
         return None
     lot_numbers = [line for line in lines if re.search(r"\d+-[А-ЯA-Z]+П\d+", line)]
     docs = _document_names(text)
@@ -184,8 +184,20 @@ def _match_from_detail(keyword: str, buy_id: str, text: str, base_url: str) -> L
 
 
 def _find_keyword(keywords: list[str], text: str) -> str | None:
+    return next((keyword for keyword in keywords if _keyword_matches(keyword, text)), None)
+
+
+def _keyword_matches(keyword: str, text: str) -> bool:
+    clean = keyword.strip()
     lowered = text.casefold()
-    return next((keyword for keyword in keywords if keyword.casefold() in lowered), None)
+    lowered_keyword = clean.casefold()
+    if _requires_token_match(clean):
+        return re.search(rf"(?<![0-9A-Za-zА-Яа-яЁё]){re.escape(lowered_keyword)}(?![0-9A-Za-zА-Яа-яЁё])", lowered) is not None
+    return lowered_keyword in lowered
+
+
+def _requires_token_match(keyword: str) -> bool:
+    return keyword.casefold() in {"1c", "1с", "ms", "итс", "project"}
 
 
 def _content_haystack(text: str) -> str:
