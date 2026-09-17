@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sqlite3
 import sys
 import time
@@ -163,10 +164,20 @@ class ErgClient:
             for row in dedupe_rows(rows):
                 if not is_active_row(row, self.config):
                     continue
-                match = match_from_row(keyword, row, self.config.page_url)
                 detail = self.get_detail(row)
-                if detail:
-                    match = match_from_detail(keyword, row, detail, self.config.page_url)
+                haystack = meaningful_haystack(row, detail)
+                if not keyword_matches(keyword, haystack):
+                    print(
+                        f"ERG: серверное ложное совпадение пропущено: {keyword} / "
+                        f"{clean_text(row.get('NUM'))}",
+                        flush=True,
+                    )
+                    continue
+                match = (
+                    match_from_detail(keyword, row, detail, self.config.page_url)
+                    if detail
+                    else match_from_row(keyword, row, self.config.page_url)
+                )
                 matches.append(match)
             time.sleep(self.config.delay_between_requests_seconds)
         return dedupe_matches(matches)
@@ -328,9 +339,29 @@ def detail_haystack(detail: dict[str, Any]) -> str:
     return "\n".join(value for value in values if value)
 
 
+def meaningful_haystack(row: dict[str, Any], detail: dict[str, Any] | None = None) -> str:
+    values = [row_haystack(row)]
+    if detail:
+        for position in detail.get("Positions") or []:
+            if not isinstance(position, dict):
+                continue
+            values.extend(
+                clean_text(position.get(field))
+                for field in ("TruFullName", "TruName", "Comment")
+            )
+    return "\n".join(value for value in values if value)
+
+
+def keyword_matches(keyword: str, text: str) -> bool:
+    clean_keyword = clean_text(keyword)
+    if not clean_keyword:
+        return False
+    pattern = rf"(?<!\w){re.escape(clean_keyword)}(?!\w)"
+    return re.search(pattern, text, flags=re.IGNORECASE) is not None
+
+
 def find_keyword(keywords: list[str], text: str) -> str | None:
-    lowered = text.lower()
-    return next((keyword for keyword in keywords if keyword.lower() in lowered), None)
+    return next((keyword for keyword in keywords if keyword_matches(keyword, text)), None)
 
 
 def filter_excluded_phrases(matches: list[Match], excluded_phrases: list[str]) -> list[Match]:
@@ -388,7 +419,7 @@ def match_from_detail(keyword: str, row: dict[str, Any], detail: dict[str, Any],
     for position in positions:
         if isinstance(position, dict):
             text = first_text(position.get("TruFullName"), position.get("TruName"), position.get("Comment"))
-            if keyword.lower() in text.lower():
+            if keyword_matches(keyword, text):
                 lines.append(text)
     if not lines:
         for position in positions[:5]:
