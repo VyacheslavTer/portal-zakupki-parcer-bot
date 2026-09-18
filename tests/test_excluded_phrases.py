@@ -21,6 +21,21 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["кресл"]))
 
+    def test_known_erg_vision_part_is_always_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="Visio",
+                title="03060123-Запчасти к технике импортной прочие",
+                url="https://torgi.erg.kz/supplier/#/competitions/617046/competition-common-info",
+                source_id="erg:617046",
+                description="Позиции:\n- ЛАМПА; ОБОЗНАЧЕНИЕ: VISION W5W 12V 5W",
+                code="T/39165/17/09/26",
+                source="ERG",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["vision w5w"]))
+
 
 if __name__ == "__main__":
     unittest.main()
