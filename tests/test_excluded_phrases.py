@@ -36,6 +36,20 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["vision w5w"]))
 
+    def test_furniture_stem_filters_upholstery_service(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="Офис",
+                title="Услуги по обтяжке мебели (обивка)",
+                url="https://example.test/206244-1",
+                source_id="mitwork:206244-1",
+                code="206244-1",
+                source="Mitwork",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["обтяж", "обивк"]))
+
 
 if __name__ == "__main__":
     unittest.main()
