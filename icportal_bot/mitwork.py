@@ -153,7 +153,8 @@ def _match_from_detail(keyword: str, buy_id: str, text: str, base_url: str) -> L
     haystack = _content_haystack(text).casefold()
     if not _keyword_matches(keyword, haystack):
         return None
-    lot_numbers = [line for line in lines if re.search(r"\d+-[А-ЯA-Z]+П\d+", line)]
+    lot_rows = _lot_rows_from_html(text)
+    lot_numbers = [number for number, _, _ in lot_rows]
     docs = _document_names(text)
     lot_urls = [urljoin(base_url, f"/ru/publics/lot/{lot_id}") for lot_id in _lot_ids_from_html(text)]
     description = "\n".join(
@@ -167,6 +168,7 @@ def _match_from_detail(keyword: str, buy_id: str, text: str, base_url: str) -> L
             _field("Организатор", _value_after(lines, "Организатор")),
             _field("Сумма", _total_amount(text) or _value_after(lines, "Общая сумма, без НДС")),
             _field("Лоты", "; ".join(lot_numbers[:5])),
+            _lot_descriptions(lot_rows[:5]),
             _field("Документы", "; ".join(docs[:8])),
             _field("Страницы лотов", "\n".join(lot_urls[:5])),
         )
@@ -203,15 +205,34 @@ def _requires_token_match(keyword: str) -> bool:
 def _content_haystack(text: str) -> str:
     lines = _text_lines(text)
     parts = [_title_from_lines(lines)]
+    for number, title, description in _lot_rows_from_html(text):
+        parts.extend((number, title, description))
+    return "\n".join(part for part in parts if part)
+
+
+def _lot_rows_from_html(text: str) -> list[tuple[str, str, str]]:
+    lots: list[tuple[str, str, str]] = []
     for row in re.findall(r"<tr[^>]+data-key=\"\d+\"[\s\S]*?</tr>", text, flags=re.IGNORECASE):
         cells = re.findall(r"<td[^>]*>([\s\S]*?)</td>", row, flags=re.IGNORECASE)
         if len(cells) < 3:
             continue
         cleaned_cells = [" ".join(html.unescape(re.sub(r"<[^>]+>", " ", cell)).split()) for cell in cells]
-        if not any(re.search(r"\d+-[А-ЯA-Z]+П\d+", cell) for cell in cleaned_cells[:2]):
+        number_match = re.search(r"\d+-[А-ЯA-Z]+\d+", cleaned_cells[0])
+        if number_match is None:
             continue
-        parts.extend(cleaned_cells[:3])
-    return "\n".join(part for part in parts if part)
+        lots.append((number_match.group(0), cleaned_cells[1], cleaned_cells[2]))
+    return lots
+
+
+def _lot_descriptions(lots: list[tuple[str, str, str]]) -> str:
+    described = [(number, description) for number, _, description in lots if description]
+    if not described:
+        return ""
+    if len(described) == 1:
+        return _field("Описание лота", described[0][1])
+    lines = ["Описания лотов:"]
+    lines.extend(f"- {number}: {description}" for number, description in described)
+    return "\n".join(lines)
 
 
 def _title_from_lines(lines: list[str]) -> str:
