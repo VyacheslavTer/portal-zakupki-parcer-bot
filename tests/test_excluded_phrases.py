@@ -50,6 +50,20 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["обтяж", "обивк"]))
 
+    def test_car_parts_camera_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="камера",
+                title="03060129-Запчасти автомашин легковых импортных",
+                url="https://torgi.erg.kz/supplier/#/competitions/000000/competition-common-info",
+                source_id="erg:000000",
+                code="S/05299/21/09/26",
+                source="ERG",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["запчасти автомашин"]))
+
 
 if __name__ == "__main__":
     unittest.main()
