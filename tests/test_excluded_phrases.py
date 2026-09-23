@@ -64,6 +64,20 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["запчасти автомашин"]))
 
+    def test_office_cabinet_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="Офис",
+                title="Шкаф офисный металлический (Жетысуская область)",
+                url="https://eep.mitwork.kz/ru/publics/buy/206252",
+                source_id="mitwork:206252-1",
+                code="206252-1",
+                source="Mitwork",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["шкаф офис"]))
+
 
 if __name__ == "__main__":
     unittest.main()
