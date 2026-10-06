@@ -106,6 +106,27 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["подбору персонала"]))
 
+    def test_event_conference_service_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="конференц",
+                title=(
+                    "Услуги по организации/проведению конференций/семинаров/форумов/"
+                    "конкурсов/корпоративных/спортивных/культурных/праздничных "
+                    "и аналогичных мероприятий"
+                ),
+                url="https://eep.mitwork.kz/ru/publics/buy/207648",
+                source_id="mitwork:207648-2",
+                code="207648-2",
+                source="Mitwork",
+            )
+        ]
+
+        self.assertEqual(
+            [],
+            _filter_excluded_phrases(matches, ["проведению конференций", "аналогичных мероприятий"]),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
