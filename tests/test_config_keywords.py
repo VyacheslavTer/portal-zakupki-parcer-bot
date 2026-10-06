@@ -90,6 +90,43 @@ class ConfigKeywordTests(unittest.TestCase):
         "Kickidler",
         "CleverControl",
     }
+    expected_dlp_spec_keywords = {
+        "контроль USB",
+        "контроль съемных носителей",
+        "съемные носители",
+        "USB-накопители",
+        "USB накопители",
+        "контроль печати",
+        "контроль буфера обмена",
+        "буфер обмена",
+        "снимки экрана",
+        "скриншоты экрана",
+        "запись экрана",
+        "запись рабочего стола",
+        "кейлоггер",
+        "клавиатурный почерк",
+        "перехват почты",
+        "контроль электронной почты",
+        "контроль мессенджеров",
+        "контроль веб-сайтов",
+        "контроль посещения сайтов",
+        "контроль файловых операций",
+        "теневое копирование",
+        "теневые копии",
+        "архивирование переписки",
+        "анализ переписки",
+        "расследование инцидентов",
+        "инциденты информационной безопасности",
+        "политики безопасности",
+        "блокировка каналов передачи данных",
+        "каналы утечки информации",
+        "каналов утечки информации",
+        "несанкционированная передача данных",
+        "конфиденциальная информация",
+        "персональные данные",
+        "инсайдерские угрозы",
+        "внутренние угрозы",
+    }
 
     def test_example_config_has_softprom_price_list_keywords(self):
         config = json.loads(Path("config.example.json").read_text(encoding="utf-8"))
@@ -109,6 +146,12 @@ class ConfigKeywordTests(unittest.TestCase):
 
         self.assertTrue(self.expected_dlp_keywords <= keywords)
 
+    def test_example_config_has_dlp_spec_keywords(self):
+        config = json.loads(Path("config.example.json").read_text(encoding="utf-8"))
+        keywords = set(config["search"]["keywords"])
+
+        self.assertTrue(self.expected_dlp_spec_keywords <= keywords)
+
     def test_erg_example_config_has_softprom_price_list_keywords(self):
         config = json.loads(Path("erg_parser/config.example.json").read_text(encoding="utf-8"))
         keywords = set(config["keywords"])
@@ -126,6 +169,12 @@ class ConfigKeywordTests(unittest.TestCase):
         keywords = set(config["keywords"])
 
         self.assertTrue(self.expected_dlp_keywords <= keywords)
+
+    def test_erg_example_config_has_dlp_spec_keywords(self):
+        config = json.loads(Path("erg_parser/config.example.json").read_text(encoding="utf-8"))
+        keywords = set(config["keywords"])
+
+        self.assertTrue(self.expected_dlp_spec_keywords <= keywords)
 
 
 if __name__ == "__main__":
