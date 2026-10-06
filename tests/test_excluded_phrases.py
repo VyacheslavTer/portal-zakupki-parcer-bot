@@ -141,6 +141,20 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["продукты питания"]))
 
+    def test_sour_cream_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="смета",
+                title="Сметана",
+                url="https://zakup.gov.kz/announcement/example#lot-88147712",
+                source_id="govzakup:88147712",
+                code="88147712-ГЗПОП1",
+                source="GovZakup",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["сметана"]))
+
 
 if __name__ == "__main__":
     unittest.main()
