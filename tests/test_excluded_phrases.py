@@ -127,6 +127,20 @@ class ExcludedPhraseTests(unittest.TestCase):
             _filter_excluded_phrases(matches, ["проведению конференций", "аналогичных мероприятий"]),
         )
 
+    def test_food_products_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="смета",
+                title="Продукты питания",
+                url="https://zakup.gov.kz/announcement/example#lot-43426668",
+                source_id="govzakup:43426668",
+                code="43426668-ОЛ-ЗЦП2",
+                source="GovZakup",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["продукты питания"]))
+
 
 if __name__ == "__main__":
     unittest.main()
