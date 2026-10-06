@@ -155,6 +155,20 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["сметана"]))
 
+    def test_projector_dlp_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="DLP",
+                title="Проектор",
+                url="https://zakup.sk.kz/#/ext(popup:item/1255995/advert)",
+                source_id="samruk:1255995",
+                code="1255995",
+                source="Samruk",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["проектор"]))
+
 
 if __name__ == "__main__":
     unittest.main()

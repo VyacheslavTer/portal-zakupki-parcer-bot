@@ -94,6 +94,7 @@ class SamrukClient:
 
     def _search_browser_keyword_on_page(self, page: Any, keyword: str, limit: int) -> list[LotMatch]:
         page.goto(_search_url(self.config.url, keyword), wait_until="domcontentloaded", timeout=60000)
+        _close_browser_modals(page)
         page.locator('select[name="advertStatusName"]').select_option(index=0, timeout=10000)
         page.locator('input[name="keywordName"]').fill(keyword, timeout=10000)
         page.locator("button.button--primary.button--bold").last.click(timeout=10000)
@@ -243,6 +244,24 @@ def _advert_search_url(base_url: str, advert_id: str) -> str:
     return f"{base_url.rstrip('/')}/#/ext(popup:item/{advert_id}/advert)?{params}"
 
 
+def _close_browser_modals(page: Any) -> None:
+    try:
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(200)
+        page.evaluate(
+            """
+            () => {
+              document.querySelectorAll('ngb-modal-window, .modal-backdrop').forEach((node) => node.remove());
+              document.body.classList.remove('modal-open');
+              document.body.style.removeProperty('overflow');
+              document.body.style.removeProperty('padding-right');
+            }
+            """
+        )
+    except Exception:
+        return
+
+
 def _matches_from_browser_text(keyword: str, text: str, config: SamrukConfig) -> list[LotMatch]:
     matches: list[LotMatch] = []
     pattern = re.compile(
@@ -257,6 +276,8 @@ def _matches_from_browser_text(keyword: str, text: str, config: SamrukConfig) ->
         block_start = match.start()
         block_end = text.find("\n№ ", match.end())
         block = text[block_start:] if block_end == -1 else text[block_start:block_end]
+        if not _keyword_matches(keyword, "\n".join((title, block))):
+            continue
         if not _is_open_browser_advert(block):
             continue
         matches.append(
@@ -368,8 +389,23 @@ def _collect_text_values(value: Any, values: list[str]) -> None:
 
 
 def _find_keyword(keywords: list[str], text: str) -> str | None:
-    lowered = text.lower()
-    return next((keyword for keyword in keywords if keyword.lower() in lowered), None)
+    return next((keyword for keyword in keywords if _keyword_matches(keyword, text)), None)
+
+
+def _keyword_matches(keyword: str, text: str) -> bool:
+    clean_keyword = " ".join(keyword.split())
+    if not clean_keyword:
+        return False
+    lowered = text.casefold()
+    lowered_keyword = clean_keyword.casefold()
+    if _requires_token_match(clean_keyword):
+        token = r"0-9A-Za-zА-Яа-яЁё"
+        return re.search(rf"(?<![{token}]){re.escape(lowered_keyword)}(?![{token}])", lowered) is not None
+    return lowered_keyword in lowered
+
+
+def _requires_token_match(keyword: str) -> bool:
+    return keyword.casefold() in {"1c", "1с", "ms", "итс", "киб", "dlp", "длп", "uam", "ueba"}
 
 
 def _match_from_advert(keyword: str, advert: dict[str, Any], detail: dict[str, Any], config: SamrukConfig) -> LotMatch:

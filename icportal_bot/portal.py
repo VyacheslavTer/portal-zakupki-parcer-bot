@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -111,6 +112,8 @@ class ICPortalClient:
         title = " ".join(str(item.get("name") or "").split())
         if not purchase_id or not title:
             return None
+        if not _keyword_matches(keyword, "\n".join((title, _purchase_description(item), str(item.get("code") or "")))):
+            return None
 
         return LotMatch(
             keyword=keyword,
@@ -134,15 +137,15 @@ class ICPortalClient:
                 haystack_parts.append(lot_text)
                 lot_lines.append(lot_text)
 
-        haystack = "\n".join(haystack_parts).lower()
-        matched_keyword = next((keyword for keyword in keywords if keyword.lower() in haystack), None)
+        haystack = "\n".join(haystack_parts)
+        matched_keyword = next((keyword for keyword in keywords if _keyword_matches(keyword, haystack)), None)
         if matched_keyword is None:
             return None
 
         purchase_id = str(detail.get("id") or "").strip()
         title = " ".join(str(detail.get("name") or "").split())
         description = _purchase_description(detail)
-        matching_lots = [line for line in lot_lines if matched_keyword.lower() in line.lower()]
+        matching_lots = [line for line in lot_lines if _keyword_matches(matched_keyword, line)]
         if matching_lots:
             description = f"Совпавшие лоты:\n" + "\n".join(f"- {line}" for line in matching_lots[:5]) + "\n" + description
 
@@ -182,6 +185,22 @@ def _field(label: str, value: object) -> str:
     if value is None or value == "":
         return ""
     return f"{label}: {value}"
+
+
+def _keyword_matches(keyword: str, text: str) -> bool:
+    clean_keyword = " ".join(keyword.split())
+    if not clean_keyword:
+        return False
+    lowered = text.casefold()
+    lowered_keyword = clean_keyword.casefold()
+    if _requires_token_match(clean_keyword):
+        token = r"0-9A-Za-zА-Яа-яЁё"
+        return re.search(rf"(?<![{token}]){re.escape(lowered_keyword)}(?![{token}])", lowered) is not None
+    return lowered_keyword in lowered
+
+
+def _requires_token_match(keyword: str) -> bool:
+    return keyword.casefold() in {"1c", "1с", "ms", "итс", "киб", "dlp", "длп", "uam", "ueba"}
 
 
 def _date_range(start: object, end: object) -> str:
