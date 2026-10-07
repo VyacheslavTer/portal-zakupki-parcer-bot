@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from time import sleep
+from typing import Callable
 from urllib.error import HTTPError, URLError
 
 from .config import ROOT, load_config
@@ -182,33 +184,19 @@ def _normalize_text(value: str) -> str:
 
 
 def _safe_search_icportal(config) -> SourceRun:
-    try:
-        return SourceRun("ICPortal", True, search_portal(config))
-    except Exception as error:
-        print(f"ICPortal: {error}, источник временно пропущен.", flush=True)
-        return SourceRun("ICPortal", True, [], str(error))
+    return _search_with_retry("ICPortal", True, lambda: search_portal(config))
 
 
 def _safe_search_samruk(config) -> SourceRun:
     if not config.samruk.enabled:
         return SourceRun("Samruk", False, [])
-    try:
-        return SourceRun("Samruk", True, search_samruk(config))
-    except HTTPError as error:
-        print(f"Samruk: HTTP {error.code}, источник временно пропущен.", flush=True)
-        return SourceRun("Samruk", True, [], f"HTTP {error.code}")
-    except (URLError, TimeoutError) as error:
-        print(f"Samruk: {error}, источник временно пропущен.", flush=True)
-        return SourceRun("Samruk", True, [], str(error))
-    except Exception as error:
-        print(f"Samruk: {error}, источник временно пропущен.", flush=True)
-        return SourceRun("Samruk", True, [], str(error))
+    return _search_with_retry("Samruk", True, lambda: search_samruk(config))
 
 
 def _safe_search_erg(config) -> SourceRun:
     if not config.erg.enabled:
         return SourceRun("ERG", False, [])
-    try:
+    def search() -> list[LotMatch]:
         from erg_parser.parser import ErgClient, load_config as load_erg_config
 
         erg_config_path = Path(config.erg.config_path)
@@ -217,36 +205,46 @@ def _safe_search_erg(config) -> SourceRun:
         erg_config = load_erg_config(erg_config_path)
         if config.erg.max_keyword_checks > 0:
             erg_config = erg_config.with_keywords(erg_config.keywords[: config.erg.max_keyword_checks])
-        return SourceRun("ERG", True, [_erg_match_to_lot_match(match) for match in ErgClient(erg_config).search()])
-    except Exception as error:
-        print(f"ERG: {error}, источник временно пропущен.", flush=True)
-        return SourceRun("ERG", True, [], str(error))
+        return [_erg_match_to_lot_match(match) for match in ErgClient(erg_config).search()]
+
+    return _search_with_retry("ERG", True, search)
 
 
 def _safe_search_govzakup(config) -> SourceRun:
     if not config.govzakup.enabled:
         return SourceRun("GovZakup", False, [])
-    try:
-        return SourceRun("GovZakup", True, search_govzakup(config))
-    except (HTTPError, URLError, TimeoutError) as error:
-        print(f"GovZakup: {error}, источник временно пропущен.", flush=True)
-        return SourceRun("GovZakup", True, [], str(error))
-    except Exception as error:
-        print(f"GovZakup: {error}, источник временно пропущен.", flush=True)
-        return SourceRun("GovZakup", True, [], str(error))
+    return _search_with_retry("GovZakup", True, lambda: search_govzakup(config))
 
 
 def _safe_search_mitwork(config) -> SourceRun:
     if not config.mitwork.enabled:
         return SourceRun("Mitwork", False, [])
-    try:
-        return SourceRun("Mitwork", True, search_mitwork(config))
-    except (HTTPError, URLError, TimeoutError) as error:
-        print(f"Mitwork: {error}, источник временно пропущен.", flush=True)
-        return SourceRun("Mitwork", True, [], str(error))
-    except Exception as error:
-        print(f"Mitwork: {error}, источник временно пропущен.", flush=True)
-        return SourceRun("Mitwork", True, [], str(error))
+    return _search_with_retry("Mitwork", True, lambda: search_mitwork(config))
+
+
+def _search_with_retry(source: str, enabled: bool, search: Callable[[], list[LotMatch]], attempts: int = 2) -> SourceRun:
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return SourceRun(source, enabled, search())
+        except Exception as error:
+            last_error = error
+            if attempt < attempts:
+                print(f"{source}: {_error_text(error)}, пробую восстановить проверку и повторить.", flush=True)
+                sleep(5)
+                continue
+            print(f"{source}: {_error_text(error)}, источник временно пропущен после повтора.", flush=True)
+    return SourceRun(source, enabled, [], _error_text(last_error) if last_error else "unknown error")
+
+
+def _error_text(error: Exception | None) -> str:
+    if error is None:
+        return "unknown error"
+    if isinstance(error, HTTPError):
+        return f"HTTP {error.code}"
+    if isinstance(error, URLError):
+        return str(error.reason)
+    return str(error)
 
 
 def _erg_match_to_lot_match(match) -> LotMatch:
