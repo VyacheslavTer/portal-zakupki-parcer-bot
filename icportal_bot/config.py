@@ -76,6 +76,7 @@ class TelegramConfig:
     enabled: bool
     bot_token_env: str
     chat_id_env: str
+    request_timeout_seconds: float
 
 
 @dataclass(frozen=True)
@@ -159,6 +160,7 @@ def load_config(path: Path | None = None) -> Config:
             enabled=bool(notifications.get("telegram_enabled", False)),
             bot_token_env=notifications.get("telegram_bot_token_env", "TELEGRAM_BOT_TOKEN"),
             chat_id_env=notifications.get("telegram_chat_id_env", "TELEGRAM_CHAT_ID"),
+            request_timeout_seconds=float(notifications.get("telegram_request_timeout_seconds", 10)),
         ),
     )
 

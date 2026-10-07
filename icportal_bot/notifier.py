@@ -35,7 +35,11 @@ def format_matches(matches: list[LotMatch], ascii_safe: bool = False) -> str:
 def send_telegram(config: TelegramConfig, matches: list[LotMatch]) -> None:
     total = len(matches)
     for index, match in enumerate(matches, start=1):
-        send_telegram_text(config, _format_match(match, index, total), disable_web_page_preview=True)
+        send_telegram_match(config, match, index, total)
+
+
+def send_telegram_match(config: TelegramConfig, match: LotMatch, index: int, total: int) -> None:
+    send_telegram_text(config, _format_match(match, index, total), disable_web_page_preview=True)
 
 
 def send_telegram_text(config: TelegramConfig, text: str, disable_web_page_preview: bool = True) -> None:
@@ -54,7 +58,7 @@ def send_telegram_text(config: TelegramConfig, text: str, disable_web_page_previ
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urlopen(request, timeout=30) as response:
+    with urlopen(request, timeout=config.request_timeout_seconds) as response:
         if response.status >= 400:
             raise RuntimeError(f"Telegram returned HTTP {response.status}")
 
@@ -109,7 +113,7 @@ def get_telegram_chat_ids(config: TelegramConfig) -> list[tuple[int, str]]:
 
     url = f"https://api.telegram.org/bot{token}/getUpdates?{urlencode({'limit': 20})}"
     request = Request(url, headers={"Accept": "application/json"}, method="GET")
-    with urlopen(request, timeout=30) as response:
+    with urlopen(request, timeout=config.request_timeout_seconds) as response:
         payload = json.loads(response.read().decode("utf-8"))
 
     seen: set[int] = set()

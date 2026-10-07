@@ -9,7 +9,7 @@ from .config import ROOT, load_config
 from .govzakup import diagnose_govzakup_keyword, search_govzakup
 from .mitwork import diagnose_mitwork_keyword, search_mitwork
 from .models import LotMatch
-from .notifier import format_matches, get_telegram_chat_ids, send_telegram, send_telegram_text
+from .notifier import format_matches, get_telegram_chat_ids, send_telegram, send_telegram_match, send_telegram_text
 from .portal import search_portal
 from .samruk import diagnose_samruk, diagnose_samruk_detail, diagnose_samruk_keyword, search_samruk
 from .store import MatchStore
@@ -45,14 +45,15 @@ def run() -> None:
             return
 
         if config.telegram.enabled:
-            send_telegram(config.telegram, new_matches)
+            for index, match in enumerate(new_matches, start=1):
+                send_telegram_match(config.telegram, match, index, len(new_matches))
+                store.mark_sent([match])
             send_telegram_text(config.telegram, report)
         else:
             print(format_matches(new_matches, ascii_safe=True))
             print()
             print(report)
-
-        store.mark_sent(new_matches)
+            store.mark_sent(new_matches)
         print(f"Новых совпадений: {len(new_matches)}")
     finally:
         store.close()

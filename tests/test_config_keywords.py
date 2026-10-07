@@ -2,6 +2,8 @@ import json
 import unittest
 from pathlib import Path
 
+from icportal_bot.config import load_config
+
 
 class ConfigKeywordTests(unittest.TestCase):
     expected_softprom_keywords = {
@@ -175,6 +177,11 @@ class ConfigKeywordTests(unittest.TestCase):
         keywords = set(config["keywords"])
 
         self.assertTrue(self.expected_dlp_spec_keywords <= keywords)
+
+    def test_example_config_sets_telegram_timeout(self):
+        config = load_config(Path("config.example.json"))
+
+        self.assertEqual(10, config.telegram.request_timeout_seconds)
 
 
 if __name__ == "__main__":
