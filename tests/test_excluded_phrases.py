@@ -50,6 +50,20 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["обтяж", "обивк"]))
 
+    def test_furniture_purchase_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="Офис",
+                title="приобретение мебели",
+                url="https://zakup.gov.kz/announcement/example#lot-43460784",
+                source_id="govzakup:43460784",
+                code="43460784-ОЛ-ОИ2",
+                source="GovZakup",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["мебел"]))
+
     def test_car_parts_camera_false_positive_is_filtered(self) -> None:
         matches = [
             LotMatch(
