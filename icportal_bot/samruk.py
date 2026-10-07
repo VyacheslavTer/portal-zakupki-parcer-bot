@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
+import sys
 import time
 from typing import Any
 from http.cookiejar import CookieJar
@@ -9,7 +11,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlsplit, urlunsplit
 from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 
-from .config import Config, SamrukConfig
+from .config import Config, ROOT, SamrukConfig
 from .models import LotMatch
 from .portal import MIN_KEYWORD_LENGTH, SHORT_KEYWORD_ALLOWLIST
 
@@ -53,17 +55,11 @@ class SamrukClient:
         return _dedupe(matches)
 
     def search_browser(self) -> list[LotMatch]:
-        try:
-            from playwright.sync_api import sync_playwright
-        except ImportError as error:
-            raise RuntimeError(
-                "Samruk browser mode requires Playwright. Install it with: "
-                "py -m pip install playwright && py -m playwright install chromium"
-            ) from error
+        sync_playwright = _load_sync_playwright()
 
         matches: list[LotMatch] = []
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True)
+            browser = _launch_chromium(playwright)
             page = browser.new_page(locale="ru-RU")
             try:
                 for keyword in _limited_keywords(self.keywords, self.config.max_keyword_checks):
@@ -76,16 +72,10 @@ class SamrukClient:
         return _dedupe(matches)
 
     def search_browser_keyword(self, keyword: str, limit: int = 10) -> list[LotMatch]:
-        try:
-            from playwright.sync_api import sync_playwright
-        except ImportError as error:
-            raise RuntimeError(
-                "Samruk browser mode requires Playwright. Install it with: "
-                "py -m pip install playwright && py -m playwright install chromium"
-            ) from error
+        sync_playwright = _load_sync_playwright()
 
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True)
+            browser = _launch_chromium(playwright)
             page = browser.new_page(locale="ru-RU")
             try:
                 return self._search_browser_keyword_on_page(page, keyword, limit)
@@ -216,6 +206,53 @@ def diagnose_samruk_keyword(config: Config, keyword: str, limit: int = 10) -> li
 
 def diagnose_samruk_detail(config: Config, advert_id: str) -> dict[str, Any] | None:
     return SamrukClient(config).fetch_detail(advert_id)
+
+
+def _load_sync_playwright():
+    try:
+        from playwright.sync_api import sync_playwright
+
+        return sync_playwright
+    except ImportError:
+        _install_playwright_package()
+        try:
+            from playwright.sync_api import sync_playwright
+
+            return sync_playwright
+        except ImportError as error:
+            raise RuntimeError(
+                "Samruk browser mode requires Playwright, and automatic installation failed. "
+                "Run: python -m pip install -r requirements.txt"
+            ) from error
+
+
+def _install_playwright_package() -> None:
+    print("Samruk: Playwright package is missing, installing requirements.txt...", flush=True)
+    subprocess.run(
+        [sys.executable, "-m", "pip", "install", "-r", str(ROOT / "requirements.txt")],
+        check=True,
+        timeout=300,
+    )
+
+
+def _launch_chromium(playwright: Any):
+    try:
+        return playwright.chromium.launch(headless=True)
+    except Exception as error:
+        if not _is_missing_browser_error(error):
+            raise
+        _install_playwright_browser()
+        return playwright.chromium.launch(headless=True)
+
+
+def _install_playwright_browser() -> None:
+    print("Samruk: Playwright Chromium is missing, installing browser...", flush=True)
+    subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True, timeout=600)
+
+
+def _is_missing_browser_error(error: Exception) -> bool:
+    message = str(error).lower()
+    return "executable doesn't exist" in message or "browser executable" in message or "playwright install" in message
 
 
 def _match_to_row(match: LotMatch) -> dict[str, Any]:

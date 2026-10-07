@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from icportal_bot.samruk import _keyword_matches
+from icportal_bot.samruk import _is_missing_browser_error, _keyword_matches
 
 
 class SamrukKeywordMatchingTests(unittest.TestCase):
@@ -17,6 +17,11 @@ class SamrukKeywordMatchingTests(unittest.TestCase):
 
     def test_dlp_matches_standalone_abbreviation(self) -> None:
         self.assertTrue(_keyword_matches("DLP", "Система DLP для предотвращения утечек"))
+
+    def test_detects_missing_playwright_browser_error(self) -> None:
+        error = Exception("Executable doesn't exist at C:\\Users\\test\\chromium.exe. Please run: playwright install")
+
+        self.assertTrue(_is_missing_browser_error(error))
 
 
 if __name__ == "__main__":
