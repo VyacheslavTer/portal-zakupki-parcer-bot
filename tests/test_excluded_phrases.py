@@ -221,6 +221,20 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["для специальной и специализированной техники"]))
 
+    def test_butterfly_valve_disk_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="диск",
+                title="Дисковый поворотный затвор НЖ (межфланцевый) DN150 с редуктором.",
+                url="https://zakup.sk.kz/#/ext(popup:item/1260418/advert)",
+                source_id="samruk:1260418",
+                code="1260418",
+                source="Samruk",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["дисковый поворотный затвор"]))
+
     def test_office_cabinet_false_positive_is_filtered(self) -> None:
         matches = [
             LotMatch(
