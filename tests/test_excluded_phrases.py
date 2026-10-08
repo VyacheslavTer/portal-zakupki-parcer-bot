@@ -263,6 +263,20 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["тумба офис"]))
 
+    def test_non_residential_property_rent_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="Офис",
+                title="Услуги по аренде и эксплуатации имущества недвижимого собственного или арендуемого нежилого",
+                url="https://eep.mitwork.kz/ru/publics/buy/208212",
+                source_id="mitwork:208212-1",
+                code="208212-1",
+                source="Mitwork",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["аренде и эксплуатации имущества недвижимого"]))
+
     def test_recruiting_site_access_false_positive_is_filtered(self) -> None:
         matches = [
             LotMatch(
