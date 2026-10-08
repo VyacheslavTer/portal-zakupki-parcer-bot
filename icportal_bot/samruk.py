@@ -100,7 +100,7 @@ class SamrukClient:
             text = page.locator("body").inner_text(timeout=10000)
             if not _is_actual_browser_detail(text, match.code):
                 continue
-            actual.append(match)
+            actual.append(_with_browser_detail_fields(match, text))
             if len(actual) >= limit:
                 break
         return actual
@@ -337,6 +337,32 @@ def _browser_description(number: str, block: str) -> str:
     amount = next((line.removeprefix("Стоимость:").strip() for line in lines if line.startswith("Стоимость:")), "")
     parts = [_field("Портал", "Samruk-Kazyna"), _field("Номер", number), _field("Способ закупки", method), _field("Сумма", amount)]
     return "\n".join(part for part in parts if part)
+
+
+def _with_browser_detail_fields(match: LotMatch, detail_text: str) -> LotMatch:
+    customer = _browser_detail_customer(detail_text)
+    if not customer or "Заказчик:" in match.description:
+        return match
+    return LotMatch(
+        keyword=match.keyword,
+        title=match.title,
+        url=match.url,
+        source_id=match.source_id,
+        description=match.description + "\n" + _field("Заказчик", customer),
+        code=match.code,
+        source=match.source,
+    )
+
+
+def _browser_detail_customer(text: str) -> str:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    for label in ("Заказчик", "Организатор"):
+        for index, line in enumerate(lines):
+            if line.casefold().startswith(f"{label.casefold()}:"):
+                return line.split(":", 1)[1].strip()
+            if line.casefold() == label.casefold() and index + 1 < len(lines):
+                return lines[index + 1].strip()
+    return ""
 
 
 def _is_open_browser_advert(block: str) -> bool:
