@@ -275,7 +275,7 @@ class ExcludedPhraseTests(unittest.TestCase):
             )
         ]
 
-        self.assertEqual([], _filter_excluded_phrases(matches, ["аренде и эксплуатации имущества недвижимого"]))
+        self.assertEqual([], _filter_excluded_phrases(matches, []))
 
     def test_recruiting_site_access_false_positive_is_filtered(self) -> None:
         matches = [

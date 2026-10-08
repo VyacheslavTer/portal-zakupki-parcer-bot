@@ -167,16 +167,21 @@ def _format_statuses(statuses: list[int]) -> str:
 
 def _filter_excluded_phrases(matches: list[LotMatch], excluded_phrases: list[str]) -> list[LotMatch]:
     phrases = [_normalize_text(phrase) for phrase in excluded_phrases if phrase.strip()]
-    if not phrases:
-        return matches
     result: list[LotMatch] = []
     for match in matches:
         haystack = _normalize_text("\n".join((match.title, match.description, match.code, match.keyword)))
-        if any(phrase in haystack for phrase in phrases):
+        if _is_builtin_excluded_match(haystack) or any(phrase in haystack for phrase in phrases):
             print(f"Исключено по минус-фразе: {match.source} {match.code or match.source_id} {match.title}", flush=True)
             continue
         result.append(match)
     return result
+
+
+def _is_builtin_excluded_match(haystack: str) -> bool:
+    is_property_rent = ("аренд" in haystack or "эксплуатац" in haystack) and (
+        "недвижим" in haystack or "нежил" in haystack
+    )
+    return is_property_rent
 
 
 def _normalize_text(value: str) -> str:
