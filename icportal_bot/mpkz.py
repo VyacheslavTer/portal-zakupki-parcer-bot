@@ -7,7 +7,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import urlencode, urljoin
-from urllib.request import Request, urlopen
+from urllib.request import ProxyHandler, Request, build_opener
 
 from .config import Config
 from .models import LotMatch
@@ -24,6 +24,7 @@ class MpKzClient:
             "Referer": self.config.tenders_url,
             "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
         }
+        self.opener = build_opener(ProxyHandler({}))
 
     def search(self) -> list[LotMatch]:
         matches: list[LotMatch] = []
@@ -51,7 +52,7 @@ class MpKzClient:
 
     def _get_text(self, url: str) -> str:
         request = Request(url, headers=self.headers, method="GET")
-        with urlopen(request, timeout=self.config.request_timeout_seconds) as response:
+        with self.opener.open(request, timeout=self.config.request_timeout_seconds) as response:
             return response.read().decode("utf-8", errors="replace")
 
 
