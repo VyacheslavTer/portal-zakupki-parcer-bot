@@ -11,6 +11,7 @@ from .config import ROOT, load_config
 from .govzakup import diagnose_govzakup_keyword, search_govzakup
 from .mitwork import diagnose_mitwork_keyword, search_mitwork
 from .models import LotMatch
+from .mpkz import diagnose_mpkz_keyword, search_mpkz
 from .notifier import format_matches, get_telegram_chat_ids, send_telegram, send_telegram_match, send_telegram_text
 from .portal import search_portal
 from .samruk import diagnose_samruk, diagnose_samruk_detail, diagnose_samruk_keyword, search_samruk
@@ -34,6 +35,7 @@ def run() -> None:
             _safe_search_samruk(config),
             _safe_search_erg(config),
             _safe_search_mitwork(config),
+            _safe_search_mpkz(config),
             _safe_search_govzakup(config),
         ]
         matches = [match for source_run in source_runs for match in source_run.matches]
@@ -105,6 +107,8 @@ def _source_status_text(config, source: str) -> str:
         return _erg_status_text(config)
     if source == "Mitwork":
         return "родные активные объявления MITWORK"
+    if source == "MP.kz":
+        return "открытые тендеры MP.kz (OPEN_FOR_BID, срок не истек)"
     if source == "GovZakup":
         return "актуальные опубликованные лоты"
     return "включен"
@@ -128,6 +132,7 @@ def _empty_report(config) -> str:
     erg_status = _erg_status_text(config) if config.erg.enabled else "выключен"
     govzakup_status = "актуальные опубликованные лоты" if config.govzakup.enabled else "выключен"
     mitwork_status = "родные активные объявления MITWORK" if config.mitwork.enabled else "выключен"
+    mpkz_status = "открытые тендеры MP.kz" if config.mpkz.enabled else "выключен"
     return (
         "Проверка порталов закупок выполнена.\n"
         f"Время: {checked_at}\n"
@@ -135,6 +140,7 @@ def _empty_report(config) -> str:
         f"Samruk: {samruk_status}\n"
         f"ERG: {erg_status}\n"
         f"Mitwork: {mitwork_status}\n"
+        f"MP.kz: {mpkz_status}\n"
         f"GovZakup: {govzakup_status}\n"
         "Новых совпадений по ключевым словам не найдено."
     )
@@ -237,6 +243,12 @@ def _safe_search_mitwork(config) -> SourceRun:
     return _search_with_retry("Mitwork", True, lambda: search_mitwork(config))
 
 
+def _safe_search_mpkz(config) -> SourceRun:
+    if not config.mpkz.enabled:
+        return SourceRun("MP.kz", False, [])
+    return _search_with_retry("MP.kz", True, lambda: search_mpkz(config))
+
+
 def _search_with_retry(source: str, enabled: bool, search: Callable[[], list[LotMatch]], attempts: int = 2) -> SourceRun:
     last_error: Exception | None = None
     for attempt in range(1, attempts + 1):
@@ -305,6 +317,15 @@ def mitwork_diagnose(keyword: str) -> None:
     matches = diagnose_mitwork_keyword(config, keyword)
     if not matches:
         print("Mitwork: актуальные объявления не найдены.")
+        return
+    print(format_matches(matches, ascii_safe=True))
+
+
+def mpkz_diagnose(keyword: str) -> None:
+    config = load_config()
+    matches = diagnose_mpkz_keyword(config, keyword)
+    if not matches:
+        print("MP.kz: открытые тендеры не найдены.")
         return
     print(format_matches(matches, ascii_safe=True))
 

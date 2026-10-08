@@ -62,6 +62,17 @@ class MitworkConfig:
 
 
 @dataclass(frozen=True)
+class MpKzConfig:
+    enabled: bool
+    url: str
+    tenders_url: str
+    max_pages: int
+    max_keyword_checks: int
+    request_timeout_seconds: float
+    delay_between_requests_seconds: float
+
+
+@dataclass(frozen=True)
 class SearchConfig:
     keywords: list[str]
     excluded_phrases: list[str]
@@ -86,6 +97,7 @@ class Config:
     erg: ErgBridgeConfig
     govzakup: GovZakupConfig
     mitwork: MitworkConfig
+    mpkz: MpKzConfig
     search: SearchConfig
     telegram: TelegramConfig
 
@@ -102,6 +114,7 @@ def load_config(path: Path | None = None) -> Config:
     erg = raw.get("erg", {})
     govzakup = raw.get("govzakup", {})
     mitwork = raw.get("mitwork", {})
+    mpkz = raw.get("mpkz", {})
     search = raw["search"]
     notifications = raw["notifications"]
 
@@ -147,6 +160,15 @@ def load_config(path: Path | None = None) -> Config:
             max_keyword_checks=int(mitwork.get("max_keyword_checks", 0)),
             request_timeout_seconds=float(mitwork.get("request_timeout_seconds", 30)),
             delay_between_requests_seconds=float(mitwork.get("delay_between_requests_seconds", 0.5)),
+        ),
+        mpkz=MpKzConfig(
+            enabled=bool(mpkz.get("enabled", False)),
+            url=mpkz.get("url", "https://mp.kz/"),
+            tenders_url=mpkz.get("tenders_url", "https://mp.kz/tenders/"),
+            max_pages=int(mpkz.get("max_pages", 3)),
+            max_keyword_checks=int(mpkz.get("max_keyword_checks", 0)),
+            request_timeout_seconds=float(mpkz.get("request_timeout_seconds", 30)),
+            delay_between_requests_seconds=float(mpkz.get("delay_between_requests_seconds", 0.5)),
         ),
         search=SearchConfig(
             keywords=[str(keyword) for keyword in search["keywords"]],
