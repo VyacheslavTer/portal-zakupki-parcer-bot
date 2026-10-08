@@ -175,6 +175,24 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["для болгарк"]))
 
+    def test_special_equipment_disk_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="диск",
+                title="Диск",
+                url="https://zakup.gov.kz/announcement/example#lot-88162801",
+                source_id="govzakup:88162801",
+                description=(
+                    "Объявление: Государственный закуп хозяйственных товаров\n"
+                    "Краткое описание: для специальной и специализированной техники"
+                ),
+                code="88162801-ЗЦП1",
+                source="GovZakup",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["для специальной и специализированной техники"]))
+
     def test_office_cabinet_false_positive_is_filtered(self) -> None:
         matches = [
             LotMatch(
