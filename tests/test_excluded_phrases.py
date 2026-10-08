@@ -372,6 +372,24 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["проектор"]))
 
+    def test_office_construction_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="Офис",
+                title=(
+                    "Работы по строительству/прокладке линии связи "
+                    "(Модернизация информационнокоммуникационной инфраструктуры) "
+                    "Головного офиса (объекты ТЭЦ-1 и ЗТК)"
+                ),
+                url="https://zakup.sk.kz/#/ext(popup:item/1254262/advert)",
+                source_id="samruk:1254262",
+                code="1254262",
+                source="Samruk",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, []))
+
 
 if __name__ == "__main__":
     unittest.main()

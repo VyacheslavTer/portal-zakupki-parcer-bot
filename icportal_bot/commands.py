@@ -187,6 +187,17 @@ def _is_builtin_excluded_match(haystack: str) -> bool:
     is_property_rent = ("аренд" in haystack or "эксплуатац" in haystack) and (
         "недвижим" in haystack or "нежил" in haystack
     )
+    is_office_construction = "офис" in haystack and (
+        "строитель" in haystack
+        or "проклад" in haystack
+        or "модернизац" in haystack
+    ) and (
+        "линии связи" in haystack
+        or "линия связи" in haystack
+        or "информационнокоммуникационной инфраструктур" in haystack
+        or "информационно коммуникационной инфраструктур" in haystack
+        or "инфраструктур" in haystack
+    )
     is_cutting_tool_disk = "диск" in haystack and (
         "отрезн" in haystack
         or "болгарк" in haystack
@@ -197,7 +208,7 @@ def _is_builtin_excluded_match(haystack: str) -> bool:
         or "абразив" in haystack
         or "круг" in haystack
     )
-    return is_property_rent or is_cutting_tool_disk
+    return is_property_rent or is_office_construction or is_cutting_tool_disk
 
 
 def _normalize_text(value: str) -> str:
