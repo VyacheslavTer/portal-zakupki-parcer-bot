@@ -390,6 +390,34 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, []))
 
+    def test_uchet_kz_access_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="доступ",
+                title="Услуги по предоставлению доступа к информационным ресурсам UCHET KZ",
+                url="https://eep.mitwork.kz/ru/publics/buy/208245",
+                source_id="mitwork:208245-1",
+                code="208245-1",
+                source="Mitwork",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["uchet", "учет кз", "учёт кз"]))
+
+    def test_paragraph_access_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="доступ",
+                title="Доступ к информационной системе Параграф",
+                url="https://example.test/paragraph",
+                source_id="example:paragraph",
+                code="paragraph",
+                source="Mitwork",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["параграф"]))
+
 
 if __name__ == "__main__":
     unittest.main()
