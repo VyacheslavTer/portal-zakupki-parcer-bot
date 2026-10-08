@@ -169,7 +169,7 @@ class ExcludedPhraseTests(unittest.TestCase):
             )
         ]
 
-        self.assertEqual([], _filter_excluded_phrases(matches, ["диск отрезной"]))
+        self.assertEqual([], _filter_excluded_phrases(matches, []))
 
     def test_grater_disk_false_positive_is_filtered(self) -> None:
         matches = [
@@ -201,7 +201,7 @@ class ExcludedPhraseTests(unittest.TestCase):
             )
         ]
 
-        self.assertEqual([], _filter_excluded_phrases(matches, ["для болгарк"]))
+        self.assertEqual([], _filter_excluded_phrases(matches, []))
 
     def test_special_equipment_disk_false_positive_is_filtered(self) -> None:
         matches = [

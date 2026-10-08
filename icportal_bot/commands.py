@@ -181,7 +181,10 @@ def _is_builtin_excluded_match(haystack: str) -> bool:
     is_property_rent = ("аренд" in haystack or "эксплуатац" in haystack) and (
         "недвижим" in haystack or "нежил" in haystack
     )
-    return is_property_rent
+    is_cutting_tool_disk = "диск" in haystack and (
+        "отрезн" in haystack or "болгарк" in haystack or "ушм" in haystack or "угловой шлифов" in haystack
+    )
+    return is_property_rent or is_cutting_tool_disk
 
 
 def _normalize_text(value: str) -> str:
