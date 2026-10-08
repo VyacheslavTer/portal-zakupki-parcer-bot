@@ -42,13 +42,18 @@ def run() -> None:
         matches = _filter_excluded_phrases(matches, config.search.excluded_phrases)
         new_matches = store.filter_new(matches)
         report = _run_report(config, source_runs, matches, new_matches)
+        failure_alert = _source_failure_alert(source_runs)
         if not new_matches:
             if config.telegram.enabled:
+                if failure_alert:
+                    send_telegram_text(config.telegram, failure_alert)
                 send_telegram_text(config.telegram, report)
             print("Новых совпадений нет.")
             return
 
         if config.telegram.enabled:
+            if failure_alert:
+                send_telegram_text(config.telegram, failure_alert)
             for index, match in enumerate(new_matches, start=1):
                 send_telegram_match(config.telegram, match, index, len(new_matches))
                 store.mark_sent([match])
@@ -77,6 +82,17 @@ def _run_report(config, source_runs: list[SourceRun], filtered_matches: list[Lot
         lines.append(f"Новых совпадений отправлено: {len(new_matches)}.")
     else:
         lines.append("Новых совпадений по ключевым словам не найдено.")
+    return "\n".join(lines)
+
+
+def _source_failure_alert(source_runs: list[SourceRun]) -> str:
+    failed_runs = [source_run for source_run in source_runs if source_run.enabled and source_run.error]
+    if not failed_runs:
+        return ""
+    lines = ["ВНИМАНИЕ: не все порталы закупок ответили."]
+    for source_run in failed_runs:
+        lines.append(f"{source_run.source}: {_short_error(source_run.error)}")
+    lines.append("Остальные порталы проверены; результаты ниже могут быть неполными.")
     return "\n".join(lines)
 
 
