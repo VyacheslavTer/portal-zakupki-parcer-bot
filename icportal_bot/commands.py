@@ -182,7 +182,14 @@ def _is_builtin_excluded_match(haystack: str) -> bool:
         "недвижим" in haystack or "нежил" in haystack
     )
     is_cutting_tool_disk = "диск" in haystack and (
-        "отрезн" in haystack or "болгарк" in haystack or "ушм" in haystack or "угловой шлифов" in haystack
+        "отрезн" in haystack
+        or "болгарк" in haystack
+        or "ушм" in haystack
+        or "угловой шлифов" in haystack
+        or "циркулярн" in haystack
+        or "пил" in haystack
+        or "абразив" in haystack
+        or "круг" in haystack
     )
     return is_property_rent or is_cutting_tool_disk
 

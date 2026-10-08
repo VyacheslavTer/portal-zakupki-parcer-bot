@@ -171,6 +171,24 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, []))
 
+    def test_circular_saw_disk_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="диск",
+                title="Диск",
+                url="https://zakup.gov.kz/announcement/40743729#lot-61178456",
+                source_id="govzakup:61178456",
+                description=(
+                    "Объявление: Приобретение материалов для хозяйственных и ремонтных нужд\n"
+                    "Краткое описание: для циркулярной пилы"
+                ),
+                code="88165994-ЗЦП1",
+                source="GovZakup",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, []))
+
     def test_grater_disk_false_positive_is_filtered(self) -> None:
         matches = [
             LotMatch(
