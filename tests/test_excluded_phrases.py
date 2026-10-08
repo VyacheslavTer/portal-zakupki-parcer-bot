@@ -78,6 +78,24 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["запчасти автомашин"]))
 
+    def test_car_tire_camera_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="камера",
+                title="Камера",
+                url="https://zakup.gov.kz/announcement/40743326#lot-61177450",
+                source_id="govzakup:61177450",
+                description=(
+                    "Объявление: Приобретение камеры для легкового автомобиля.\n"
+                    "Краткое описание: для легковых автомобилей, 6,50-16, резиновая"
+                ),
+                code="88157981-ЗЦП1",
+                source="GovZakup",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["для легкового автомобиля"]))
+
     def test_office_cabinet_false_positive_is_filtered(self) -> None:
         matches = [
             LotMatch(

@@ -172,9 +172,24 @@ def _description(row: dict[str, Any]) -> str:
         _field("Прием заявок до", _format_datetime(row.get("offer_end_date"))),
         _field("Заказчик", row.get("organization_name")),
         _field("Сумма", _format_amount(row.get("total_price"))),
+        _field("Объявление", row.get("announcement_name_ru")),
+        _field("Краткое описание", _enstru_short_description(row)),
         _field("Описание", row.get("description_ru")),
     ]
     return "\n".join(part for part in parts if part)
+
+
+def _enstru_short_description(row: dict[str, Any]) -> str:
+    enstrus = row.get("enstrus")
+    if not isinstance(enstrus, list):
+        return ""
+    descriptions: list[str] = []
+    for enstru in enstrus:
+        if isinstance(enstru, dict):
+            description = _text(enstru.get("short_description_ru"))
+            if description:
+                descriptions.append(description)
+    return "; ".join(dict.fromkeys(descriptions))
 
 
 def _field(label: str, value: object) -> str:
