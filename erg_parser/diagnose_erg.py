@@ -12,7 +12,7 @@ from urllib.request import Request, urlopen
 
 
 API_URL = "https://torgi.erg.kz/api/SupplierAuctionService/GetAuctions"
-PAGE_URL = "https://torgi.erg.kz/supplier/#/competitions"
+PAGE_URL = "https://torgi.erg.kz/contests"
 
 
 @dataclass(frozen=True)

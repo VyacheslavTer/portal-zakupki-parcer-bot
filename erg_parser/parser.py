@@ -469,7 +469,14 @@ def format_matches(matches: list[Match]) -> str:
 def competition_url(page_url: str, auction_id: str) -> str:
     if not auction_id:
         return page_url
-    return f"{page_url.rstrip('/')}/{auction_id}/competition-common-info"
+    return f"{_erg_public_base_url(page_url)}/contests/{auction_id}/offer-positions"
+
+
+def _erg_public_base_url(page_url: str) -> str:
+    match = re.match(r"(https?://[^/]+)", page_url)
+    if match:
+        return match.group(1).rstrip("/")
+    return "https://torgi.erg.kz"
 
 
 def send_telegram(config: Config, text: str) -> None:

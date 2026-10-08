@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from erg_parser.parser import keyword_matches, meaningful_haystack
+from erg_parser.parser import competition_url, keyword_matches, meaningful_haystack
 
 
 class ErgKeywordMatchingTests(unittest.TestCase):
@@ -21,6 +21,12 @@ class ErgKeywordMatchingTests(unittest.TestCase):
 
         self.assertIn("Серверное оборудование", haystack)
         self.assertNotIn("Project договор.docx", haystack)
+
+    def test_competition_url_uses_new_public_interface(self) -> None:
+        self.assertEqual(
+            "https://torgi.erg.kz/contests/618907/offer-positions",
+            competition_url("https://torgi.erg.kz/supplier/#/competitions", "618907"),
+        )
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 {
   "api_url": "https://torgi.erg.kz/api/SupplierAuctionService/GetAuctions",
   "detail_api_url": "https://torgi.erg.kz/api/SupplierAuctionService/GetCommercialOffer",
-  "page_url": "https://torgi.erg.kz/supplier/#/competitions",
+  "page_url": "https://torgi.erg.kz/contests",
   "statuses": [4],
   "search_mode": "server_keywords",
   "publish_date_days": 31,

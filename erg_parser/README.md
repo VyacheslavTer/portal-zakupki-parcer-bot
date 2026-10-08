@@ -1,6 +1,6 @@
 # ERG Parser Probe
 
-Отдельная песочница для проверки `https://torgi.erg.kz/supplier/#/competitions`.
+Отдельная песочница для проверки `https://torgi.erg.kz/contests`.
 
 Рабочий ICPortal-бот в `icportal_bot/` не импортирует этот код.
 
