@@ -21,6 +21,20 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["кресл"]))
 
+    def test_office_stool_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="Офис",
+                title="Стул офисный (ГРЭ-5)",
+                url="https://zakup.sk.kz/#/ext(popup:item/1260335/advert)",
+                source_id="samruk:1260335",
+                code="1260335",
+                source="Samruk",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["стул"]))
+
     def test_known_erg_vision_part_is_always_filtered(self) -> None:
         matches = [
             LotMatch(
