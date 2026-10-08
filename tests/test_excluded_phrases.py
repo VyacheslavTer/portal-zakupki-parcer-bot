@@ -64,6 +64,20 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["мебел"]))
 
+    def test_chipboard_table_material_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="MS",
+                title="Материалы для ДСП стола",
+                url="https://icportal.kz/example",
+                source_id="icportal:20261007-INT-008",
+                code="20261007-INT-008",
+                source="ICPortal",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["дсп"]))
+
     def test_car_parts_camera_false_positive_is_filtered(self) -> None:
         matches = [
             LotMatch(
