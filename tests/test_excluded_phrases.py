@@ -128,6 +128,21 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["гигиенический, ватный"]))
 
+    def test_cutting_disk_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="диск",
+                title="Диск отрезной",
+                url="https://zakup.gov.kz/announcement/example#lot-88046666",
+                source_id="govzakup:88046666",
+                description="Объявление: Приобретение строительных материалов",
+                code="88046666-ЗЦП2",
+                source="GovZakup",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["диск отрезной"]))
+
     def test_office_cabinet_false_positive_is_filtered(self) -> None:
         matches = [
             LotMatch(
