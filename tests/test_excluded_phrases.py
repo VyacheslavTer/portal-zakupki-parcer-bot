@@ -143,6 +143,38 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["диск отрезной"]))
 
+    def test_grater_disk_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="диск",
+                title="Диск",
+                url="https://zakup.gov.kz/announcement/example#lot-88035791",
+                source_id="govzakup:88035791",
+                description=(
+                    "Объявление: Приобретение строительных материалов\n"
+                    "Краткое описание: для терки и шинковки, стальной"
+                ),
+                code="88035791-ЗЦП2",
+                source="GovZakup",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["для терки и шинковки"]))
+
+    def test_grinder_disk_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="диск",
+                title="Диск для болгарки",
+                url="https://zakup.gov.kz/announcement/example#lot-grinder",
+                source_id="govzakup:grinder",
+                code="grinder",
+                source="GovZakup",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, ["для болгарк"]))
+
     def test_office_cabinet_false_positive_is_filtered(self) -> None:
         matches = [
             LotMatch(
