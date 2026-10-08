@@ -3,13 +3,14 @@ from __future__ import annotations
 import json
 import os
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import ProxyHandler, Request, build_opener
 
 from .config import TelegramConfig
 from .models import LotMatch
 
 
 MAX_TELEGRAM_MESSAGE_LENGTH = 3500
+DIRECT_OPENER = build_opener(ProxyHandler({}))
 
 
 def format_matches(matches: list[LotMatch], ascii_safe: bool = False) -> str:
@@ -58,7 +59,7 @@ def send_telegram_text(config: TelegramConfig, text: str, disable_web_page_previ
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urlopen(request, timeout=config.request_timeout_seconds) as response:
+    with DIRECT_OPENER.open(request, timeout=config.request_timeout_seconds) as response:
         if response.status >= 400:
             raise RuntimeError(f"Telegram returned HTTP {response.status}")
 
@@ -113,7 +114,7 @@ def get_telegram_chat_ids(config: TelegramConfig) -> list[tuple[int, str]]:
 
     url = f"https://api.telegram.org/bot{token}/getUpdates?{urlencode({'limit': 20})}"
     request = Request(url, headers={"Accept": "application/json"}, method="GET")
-    with urlopen(request, timeout=config.request_timeout_seconds) as response:
+    with DIRECT_OPENER.open(request, timeout=config.request_timeout_seconds) as response:
         payload = json.loads(response.read().decode("utf-8"))
 
     seen: set[int] = set()
