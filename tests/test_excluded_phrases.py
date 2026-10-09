@@ -138,6 +138,34 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, ["диск колеса"]))
 
+    def test_clutch_disk_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="диск",
+                title="Диск сцепления",
+                url="https://zakup.gov.kz/announcement/example#lot-88124222",
+                source_id="govzakup:88124222",
+                code="88124222-ЗЦП1",
+                source="GovZakup",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, []))
+
+    def test_brake_disk_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="диск",
+                title="Диск тормозной",
+                url="https://zakup.gov.kz/announcement/example#lot-87822277",
+                source_id="govzakup:87822277",
+                code="87822277-ЗЦП2",
+                source="GovZakup",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, []))
+
     def test_cotton_disk_false_positive_is_filtered(self) -> None:
         matches = [
             LotMatch(

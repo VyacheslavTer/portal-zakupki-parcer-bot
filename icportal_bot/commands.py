@@ -223,6 +223,10 @@ def _is_builtin_excluded_match(haystack: str) -> bool:
         or "пил" in haystack
         or "абразив" in haystack
         or "круг" in haystack
+        or "колес" in haystack
+        or "колёс" in haystack
+        or "сцеплен" in haystack
+        or "тормозн" in haystack
     )
     return is_property_rent or is_office_construction or is_cutting_tool_disk
 
