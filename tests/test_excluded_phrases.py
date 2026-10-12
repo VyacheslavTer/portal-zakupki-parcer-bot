@@ -365,6 +365,20 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, []))
 
+    def test_generic_office_goods_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="Офис",
+                title="Товары для офиса",
+                url="https://zakup.gov.kz/",
+                source_id="govzakup:43539976-ОЛ-ЗЦП1",
+                code="43539976-ОЛ-ЗЦП1",
+                source="GovZakup",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, []))
+
     def test_recruiting_site_access_false_positive_is_filtered(self) -> None:
         matches = [
             LotMatch(
