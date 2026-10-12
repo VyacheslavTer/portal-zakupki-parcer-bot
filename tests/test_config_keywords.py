@@ -58,6 +58,7 @@ class ConfigKeywordTests(unittest.TestCase):
         "Контур ИБ",
         "контур информационной безопасности",
         "информационная безопасность",
+        "информационной безопасности",
         "защита информации",
         "защита от утечек",
         "предотвращение утечек",
@@ -91,6 +92,13 @@ class ConfigKeywordTests(unittest.TestCase):
         "LanAgent",
         "Kickidler",
         "CleverControl",
+        "Qualys",
+        "Kaspersky",
+        "Касперский",
+        "Splunk",
+        "Fortigate",
+        "FortiGate",
+        "Fortinet",
     }
     expected_dlp_spec_keywords = {
         "контроль USB",
