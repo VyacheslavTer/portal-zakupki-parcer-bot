@@ -351,6 +351,20 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, []))
 
+    def test_office_premises_rent_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="Офис",
+                title="Услуги по аренде офисных помещений (на 2027 год)",
+                url="https://eep.mitwork.kz/ru/publics/buy/208366",
+                source_id="mitwork:208366-1",
+                code="208366-1",
+                source="Mitwork",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, []))
+
     def test_recruiting_site_access_false_positive_is_filtered(self) -> None:
         matches = [
             LotMatch(
