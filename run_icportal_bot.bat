@@ -3,6 +3,7 @@ cd /d "C:\repa\Icportal parser"
 set "PY=C:\Users\v.terechshenko\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
 set "LOG=C:\repa\Icportal parser\data\scheduler.log"
 set "SETUP_LOG=C:\repa\Icportal parser\data\scheduler_setup.log"
+set "PYTHONIOENCODING=utf-8"
 
 echo ==== ICPortal bot start %date% %time% ==== >> "%LOG%"
 

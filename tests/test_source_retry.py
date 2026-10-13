@@ -3,7 +3,14 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from icportal_bot.commands import SourceRun, _source_failure_alert, _source_failure_recovery_message, _search_with_retry
+from icportal_bot.commands import (
+    DEFAULT_SOURCE_TIMEOUT_SECONDS,
+    SourceRun,
+    _search_with_retry,
+    _source_failure_alert,
+    _source_failure_recovery_message,
+    _source_timeout_seconds,
+)
 from icportal_bot.models import LotMatch
 
 
@@ -86,6 +93,10 @@ class SourceRetryTests(unittest.TestCase):
 
         start_recovery.assert_not_called()
         self.assertEqual("", message)
+
+    def test_samruk_has_source_specific_timeout(self) -> None:
+        self.assertEqual(1800, _source_timeout_seconds("Samruk"))
+        self.assertEqual(DEFAULT_SOURCE_TIMEOUT_SECONDS, _source_timeout_seconds("MP.kz"))
 
 
 if __name__ == "__main__":

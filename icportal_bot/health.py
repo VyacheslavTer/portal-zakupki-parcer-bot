@@ -60,6 +60,8 @@ def _run_status_problems(path: Path, scheduled_at: datetime, expected_sources: l
     if not isinstance(sources, list) or not sources:
         return ["в run_status.json нет списка источников"]
     problems: list[str] = []
+    if payload.get("complete") is False:
+        problems.append("последний прогон еще не завершился полностью")
     seen_enabled: set[str] = set()
     for source in sources:
         if not isinstance(source, dict) or not source.get("enabled"):

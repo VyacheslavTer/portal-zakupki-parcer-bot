@@ -70,6 +70,20 @@ class HealthStatusTests(unittest.TestCase):
             _run_status_problems(path, scheduled_at, ["MP.kz", "Samruk"]),
         )
 
+    def test_incomplete_status_file_is_reported(self) -> None:
+        scheduled_at = datetime(2026, 10, 13, 10, 0)
+        payload = {
+            "checked_at": "2026-10-13T10:05:00",
+            "complete": False,
+            "sources": [{"source": "MP.kz", "enabled": True, "error": ""}],
+        }
+        path = self._write_status(payload, scheduled_at + timedelta(minutes=5))
+        self.addCleanup(self._cleanup_status, path)
+
+        problems = _run_status_problems(path, scheduled_at, ["MP.kz"])
+
+        self.assertIn("последний прогон еще не завершился полностью", problems)
+
     def _write_status(self, payload: dict[str, object], mtime: datetime) -> Path:
         path = Path("data") / f"test_health_{os.getpid()}_{id(payload)}.json"
         path.parent.mkdir(exist_ok=True)

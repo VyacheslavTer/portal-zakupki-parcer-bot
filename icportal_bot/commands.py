@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 from multiprocessing import Process, Queue
 from queue import Empty
 from dataclasses import dataclass
@@ -22,7 +23,10 @@ from .portal import search_portal
 from .samruk import diagnose_samruk, diagnose_samruk_detail, diagnose_samruk_keyword, search_samruk
 from .store import MatchStore
 
-SOURCE_TIMEOUT_SECONDS = 3600
+DEFAULT_SOURCE_TIMEOUT_SECONDS = 3600
+SOURCE_TIMEOUT_SECONDS = {
+    "Samruk": 1800,
+}
 SOURCE_NAMES = ("ICPortal", "Samruk", "ERG", "Mitwork", "MP.kz", "GovZakup")
 RECOVERY_RUN_ENV = "ICPORTAL_RECOVERY_RUN"
 
@@ -39,11 +43,11 @@ def run() -> None:
     config = load_config()
     store = MatchStore(ROOT / "data" / "sent.sqlite3")
     try:
-        source_runs = _run_sources(config, lambda runs: _write_run_status(runs, [], []))
+        source_runs = _run_sources(config, lambda runs: _write_run_status(runs, [], [], complete=False))
         matches = [match for source_run in source_runs for match in source_run.matches]
         matches = _filter_excluded_phrases(matches, config.search.excluded_phrases)
         new_matches = store.filter_new(matches)
-        _write_run_status(source_runs, matches, new_matches)
+        _write_run_status(source_runs, matches, new_matches, complete=True)
         report = _run_report(config, source_runs, matches, new_matches)
         failure_alert = _source_failure_alert(source_runs)
         recovery_message = _source_failure_recovery_message(source_runs)
@@ -93,12 +97,18 @@ def _run_report(config, source_runs: list[SourceRun], filtered_matches: list[Lot
     return "\n".join(lines)
 
 
-def _write_run_status(source_runs: list[SourceRun], filtered_matches: list[LotMatch], new_matches: list[LotMatch]) -> None:
+def _write_run_status(
+    source_runs: list[SourceRun],
+    filtered_matches: list[LotMatch],
+    new_matches: list[LotMatch],
+    complete: bool,
+) -> None:
     now = datetime.now()
     filtered_counts = _count_by_source(filtered_matches)
     new_counts = _count_by_source(new_matches)
     payload = {
         "checked_at": now.isoformat(timespec="seconds"),
+        "complete": complete,
         "sources": [
             {
                 "source": source_run.source,
@@ -252,7 +262,7 @@ def _filter_excluded_phrases(matches: list[LotMatch], excluded_phrases: list[str
     for match in matches:
         haystack = _normalize_text("\n".join((match.title, match.description, match.code, match.keyword)))
         if _is_builtin_excluded_match(haystack) or any(phrase in haystack for phrase in phrases):
-            print(f"Исключено по минус-фразе: {match.source} {match.code or match.source_id} {match.title}", flush=True)
+            _safe_print(f"Исключено по минус-фразе: {match.source} {match.code or match.source_id} {match.title}")
             continue
         result.append(match)
     return result
@@ -371,7 +381,17 @@ def _run_sources(config, status_callback: Callable[[list[SourceRun]], None]) -> 
             if source in completed:
                 continue
             process, queue, started_at = processes[source]
-            if process.is_alive() and monotonic() - started_at > SOURCE_TIMEOUT_SECONDS:
+            result = _try_source_run_from_queue(source, queue)
+            if result is not None:
+                process.join(10)
+                if process.is_alive():
+                    process.terminate()
+                    process.join(5)
+                completed[source] = result
+                changed = True
+                continue
+            timeout_seconds = _source_timeout_seconds(source)
+            if process.is_alive() and monotonic() - started_at > timeout_seconds:
                 completed[source] = _timeout_source_run(source, process)
                 changed = True
                 continue
@@ -387,12 +407,17 @@ def _run_sources(config, status_callback: Callable[[list[SourceRun]], None]) -> 
 
 
 def _timeout_source_run(source: str, process: Process) -> SourceRun:
+    timeout_seconds = _source_timeout_seconds(source)
     process.terminate()
     process.join(10)
     if process.is_alive():
         process.kill()
         process.join(5)
-    return SourceRun(source, True, [], f"timeout after {SOURCE_TIMEOUT_SECONDS} seconds")
+    return SourceRun(source, True, [], f"timeout after {timeout_seconds} seconds")
+
+
+def _source_timeout_seconds(source: str) -> int:
+    return SOURCE_TIMEOUT_SECONDS.get(source, DEFAULT_SOURCE_TIMEOUT_SECONDS)
 
 
 def _source_run_from_queue(source: str, queue: Queue) -> SourceRun:
@@ -400,6 +425,18 @@ def _source_run_from_queue(source: str, queue: Queue) -> SourceRun:
         result = queue.get(timeout=2)
     except Empty:
         return SourceRun(source, True, [], "search process finished without result")
+    return _coerce_source_run(source, result)
+
+
+def _try_source_run_from_queue(source: str, queue: Queue) -> SourceRun | None:
+    try:
+        result = queue.get_nowait()
+    except Empty:
+        return None
+    return _coerce_source_run(source, result)
+
+
+def _coerce_source_run(source: str, result) -> SourceRun:
     if isinstance(result, SourceRun):
         return result
     return SourceRun(source, True, [], str(result))
@@ -440,11 +477,17 @@ def _search_with_retry(source: str, enabled: bool, search: Callable[[], list[Lot
         except Exception as error:
             last_error = error
             if attempt < attempts:
-                print(f"{source}: {_error_text(error)}, пробую восстановить проверку и повторить.", flush=True)
+                _safe_print(f"{source}: {_error_text(error)}, пробую восстановить проверку и повторить.")
                 sleep(5)
                 continue
-            print(f"{source}: {_error_text(error)}, источник временно пропущен после повтора.", flush=True)
+            _safe_print(f"{source}: {_error_text(error)}, источник временно пропущен после повтора.")
     return SourceRun(source, enabled, [], _error_text(last_error) if last_error else "unknown error")
+
+
+def _safe_print(message: str) -> None:
+    encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+    safe_message = message.encode(encoding, errors="replace").decode(encoding, errors="replace")
+    print(safe_message, flush=True)
 
 
 def _error_text(error: Exception | None) -> str:
