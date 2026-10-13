@@ -30,6 +30,11 @@ class ConfigKeywordTests(unittest.TestCase):
         "V-Ray",
         "Trimble Connect",
         "VNZ",
+        "Jira",
+        "Atlassian",
+        "HCL Domino",
+        "Domino",
+        "Lotus",
     }
     expected_staffcop_keywords = {
         "StaffCop",
