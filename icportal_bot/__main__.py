@@ -4,6 +4,7 @@ import argparse
 import sys
 
 from .commands import govzakup_diagnose, mitwork_diagnose, mpkz_diagnose, run, samruk_diagnose, telegram_chat_id, telegram_test
+from .health import run_health_check
 
 
 def main() -> None:
@@ -23,6 +24,7 @@ def main() -> None:
     mpkz_parser.add_argument("--keyword", required=True, help="Check MP.kz public tenders search for a keyword.")
     subparsers.add_parser("telegram-chat-id", help="Show chat ids from recent Telegram bot messages.")
     subparsers.add_parser("telegram-test", help="Send a test Telegram message.")
+    subparsers.add_parser("health-check", help="Check scheduled run freshness and start recovery if needed.")
 
     args = parser.parse_args()
     if args.command == "run":
@@ -39,6 +41,8 @@ def main() -> None:
         telegram_chat_id()
     elif args.command == "telegram-test":
         telegram_test()
+    elif args.command == "health-check":
+        run_health_check()
 
 
 if __name__ == "__main__":
