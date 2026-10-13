@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
+from multiprocessing import Process, Queue
+from queue import Empty
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from time import sleep
+from time import monotonic, sleep
 from typing import Callable
 from urllib.error import HTTPError, URLError
 
@@ -16,6 +19,9 @@ from .notifier import format_matches, get_telegram_chat_ids, send_telegram, send
 from .portal import search_portal
 from .samruk import diagnose_samruk, diagnose_samruk_detail, diagnose_samruk_keyword, search_samruk
 from .store import MatchStore
+
+SOURCE_TIMEOUT_SECONDS = 600
+SOURCE_NAMES = ("ICPortal", "Samruk", "ERG", "Mitwork", "MP.kz", "GovZakup")
 
 
 @dataclass(frozen=True)
@@ -30,17 +36,11 @@ def run() -> None:
     config = load_config()
     store = MatchStore(ROOT / "data" / "sent.sqlite3")
     try:
-        source_runs = [
-            _safe_search_icportal(config),
-            _safe_search_samruk(config),
-            _safe_search_erg(config),
-            _safe_search_mitwork(config),
-            _safe_search_mpkz(config),
-            _safe_search_govzakup(config),
-        ]
+        source_runs = _run_sources(config, lambda runs: _write_run_status(runs, [], []))
         matches = [match for source_run in source_runs for match in source_run.matches]
         matches = _filter_excluded_phrases(matches, config.search.excluded_phrases)
         new_matches = store.filter_new(matches)
+        _write_run_status(source_runs, matches, new_matches)
         report = _run_report(config, source_runs, matches, new_matches)
         failure_alert = _source_failure_alert(source_runs)
         if not new_matches:
@@ -83,6 +83,29 @@ def _run_report(config, source_runs: list[SourceRun], filtered_matches: list[Lot
     else:
         lines.append("Новых совпадений по ключевым словам не найдено.")
     return "\n".join(lines)
+
+
+def _write_run_status(source_runs: list[SourceRun], filtered_matches: list[LotMatch], new_matches: list[LotMatch]) -> None:
+    now = datetime.now()
+    filtered_counts = _count_by_source(filtered_matches)
+    new_counts = _count_by_source(new_matches)
+    payload = {
+        "checked_at": now.isoformat(timespec="seconds"),
+        "sources": [
+            {
+                "source": source_run.source,
+                "enabled": source_run.enabled,
+                "error": source_run.error,
+                "found": len(source_run.matches),
+                "after_filters": filtered_counts.get(source_run.source, 0),
+                "new": new_counts.get(source_run.source, 0),
+            }
+            for source_run in source_runs
+        ],
+    }
+    path = ROOT / "data" / "run_status.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _source_failure_alert(source_runs: list[SourceRun]) -> str:
@@ -293,6 +316,82 @@ def _safe_search_mpkz(config) -> SourceRun:
     if not config.mpkz.enabled:
         return SourceRun("MP.kz", False, [])
     return _search_with_retry("MP.kz", True, lambda: search_mpkz(config))
+
+
+def _run_sources(config, status_callback: Callable[[list[SourceRun]], None]) -> list[SourceRun]:
+    processes: dict[str, tuple[Process, Queue, float]] = {}
+    completed: dict[str, SourceRun] = {}
+    for source in SOURCE_NAMES:
+        queue: Queue = Queue(maxsize=1)
+        process = Process(target=_search_source_worker, args=(source, config, queue), daemon=True)
+        process.start()
+        processes[source] = (process, queue, monotonic())
+
+    while len(completed) < len(SOURCE_NAMES):
+        changed = False
+        for source in SOURCE_NAMES:
+            if source in completed:
+                continue
+            process, queue, started_at = processes[source]
+            if process.is_alive() and monotonic() - started_at > SOURCE_TIMEOUT_SECONDS:
+                completed[source] = _timeout_source_run(source, process)
+                changed = True
+                continue
+            if process.is_alive():
+                continue
+            completed[source] = _source_run_from_queue(source, queue)
+            changed = True
+        if changed:
+            status_callback(_ordered_source_runs(completed))
+            continue
+        sleep(1)
+    return _ordered_source_runs(completed)
+
+
+def _timeout_source_run(source: str, process: Process) -> SourceRun:
+    process.terminate()
+    process.join(10)
+    if process.is_alive():
+        process.kill()
+        process.join(5)
+    return SourceRun(source, True, [], f"timeout after {SOURCE_TIMEOUT_SECONDS} seconds")
+
+
+def _source_run_from_queue(source: str, queue: Queue) -> SourceRun:
+    try:
+        result = queue.get(timeout=2)
+    except Empty:
+        return SourceRun(source, True, [], "search process finished without result")
+    if isinstance(result, SourceRun):
+        return result
+    return SourceRun(source, True, [], str(result))
+
+
+def _ordered_source_runs(source_runs: dict[str, SourceRun]) -> list[SourceRun]:
+    return [source_runs[source] for source in SOURCE_NAMES if source in source_runs]
+
+
+def _search_source_worker(source: str, config, queue: Queue) -> None:
+    try:
+        queue.put(_safe_search_source(source, config))
+    except Exception as error:
+        queue.put(SourceRun(source, True, [], _error_text(error)))
+
+
+def _safe_search_source(source: str, config) -> SourceRun:
+    if source == "ICPortal":
+        return _safe_search_icportal(config)
+    if source == "Samruk":
+        return _safe_search_samruk(config)
+    if source == "ERG":
+        return _safe_search_erg(config)
+    if source == "Mitwork":
+        return _safe_search_mitwork(config)
+    if source == "MP.kz":
+        return _safe_search_mpkz(config)
+    if source == "GovZakup":
+        return _safe_search_govzakup(config)
+    return SourceRun(source, False, [], "unknown source")
 
 
 def _search_with_retry(source: str, enabled: bool, search: Callable[[], list[LotMatch]], attempts: int = 2) -> SourceRun:

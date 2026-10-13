@@ -20,9 +20,11 @@ def run_health_check(now: datetime | None = None) -> None:
         print("ICPortal health: too early to check today's scheduled run.")
         return
 
-    log_path = ROOT / "data" / "scheduler.log"
-    if _is_fresh(log_path, scheduled_at):
-        print("ICPortal health: scheduled run log is fresh.")
+    config = load_config()
+    status_path = ROOT / "data" / "run_status.json"
+    problems = _run_status_problems(status_path, scheduled_at, _enabled_source_names(config))
+    if not problems:
+        print("ICPortal health: all enabled sources reported successfully.")
         return
 
     marker_path = ROOT / "data" / "health_alert.json"
@@ -33,11 +35,11 @@ def run_health_check(now: datetime | None = None) -> None:
         return
 
     message = (
-        "ВНИМАНИЕ: ежедневный парсер закупок не обновил лог после 10:00.\n"
-        f"Последняя запись scheduler.log: {_mtime_text(log_path)}.\n"
+        "ВНИМАНИЕ: ежедневный парсер закупок не прошел полную проверку всех порталов.\n"
+        + "\n".join(f"- {problem}" for problem in problems)
+        + "\n"
         "Запускаю восстановительный прогон."
     )
-    config = load_config()
     if config.telegram.enabled:
         send_telegram_text(config.telegram, message)
     print(message)
@@ -45,14 +47,62 @@ def run_health_check(now: datetime | None = None) -> None:
     _write_marker(marker_path, {"date": today, "recovery_started": checked_at.isoformat(timespec="seconds")})
 
 
-def _is_fresh(path: Path, scheduled_at: datetime) -> bool:
-    return path.exists() and datetime.fromtimestamp(path.stat().st_mtime) >= scheduled_at
+def _run_status_problems(path: Path, scheduled_at: datetime, expected_sources: list[str] | None = None) -> list[str]:
+    if not path.exists():
+        return ["нет data/run_status.json с результатами последнего полного прогона"]
+    if datetime.fromtimestamp(path.stat().st_mtime) < scheduled_at:
+        return [f"data/run_status.json устарел: {_mtime_text(path)}"]
+    payload = _read_marker(path)
+    checked_at = _parse_datetime(payload.get("checked_at"))
+    if checked_at is None or checked_at < scheduled_at:
+        return [f"последний полный прогон устарел: {payload.get('checked_at') or 'нет checked_at'}"]
+    sources = payload.get("sources")
+    if not isinstance(sources, list) or not sources:
+        return ["в run_status.json нет списка источников"]
+    problems: list[str] = []
+    seen_enabled: set[str] = set()
+    for source in sources:
+        if not isinstance(source, dict) or not source.get("enabled"):
+            continue
+        name = str(source.get("source") or "unknown")
+        seen_enabled.add(name)
+        error = str(source.get("error") or "").strip()
+        if error:
+            problems.append(f"{name}: ошибка проверки - {error[:180]}")
+    for name in expected_sources or []:
+        if name not in seen_enabled:
+            problems.append(f"{name}: нет результата проверки в последнем прогоне")
+    return problems
+
+
+def _enabled_source_names(config) -> list[str]:
+    names = ["ICPortal"]
+    if config.samruk.enabled:
+        names.append("Samruk")
+    if config.erg.enabled:
+        names.append("ERG")
+    if config.mitwork.enabled:
+        names.append("Mitwork")
+    if config.mpkz.enabled:
+        names.append("MP.kz")
+    if config.govzakup.enabled:
+        names.append("GovZakup")
+    return names
 
 
 def _mtime_text(path: Path) -> str:
     if not path.exists():
         return "файл отсутствует"
     return datetime.fromtimestamp(path.stat().st_mtime).strftime("%d.%m.%Y %H:%M:%S")
+
+
+def _parse_datetime(value: object) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
 
 
 def _start_recovery_run() -> None:
