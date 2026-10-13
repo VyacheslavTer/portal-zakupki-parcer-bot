@@ -232,6 +232,7 @@ def _is_builtin_excluded_match(haystack: str) -> bool:
     is_generic_office_goods = "офис" in haystack and (
         "товары для офис" in haystack or "товар для офис" in haystack
     )
+    is_stationery_goods = "канцеляр" in haystack
     is_office_construction = "офис" in haystack and (
         "строитель" in haystack
         or "проклад" in haystack
@@ -264,6 +265,7 @@ def _is_builtin_excluded_match(haystack: str) -> bool:
         is_property_rent
         or is_office_rent
         or is_generic_office_goods
+        or is_stationery_goods
         or is_office_construction
         or is_cutting_tool_disk
     )

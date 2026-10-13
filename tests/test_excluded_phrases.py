@@ -393,6 +393,20 @@ class ExcludedPhraseTests(unittest.TestCase):
 
         self.assertEqual([], _filter_excluded_phrases(matches, []))
 
+    def test_stationery_goods_false_positive_is_filtered(self) -> None:
+        matches = [
+            LotMatch(
+                keyword="Офис",
+                title="Канцелярские товары",
+                url="https://eep.mitwork.kz/ru/publics/buy/208686",
+                source_id="mitwork:208686-1",
+                code="208686-1",
+                source="Mitwork",
+            )
+        ]
+
+        self.assertEqual([], _filter_excluded_phrases(matches, []))
+
     def test_recruiting_site_access_false_positive_is_filtered(self) -> None:
         matches = [
             LotMatch(
