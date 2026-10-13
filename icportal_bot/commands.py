@@ -20,7 +20,7 @@ from .portal import search_portal
 from .samruk import diagnose_samruk, diagnose_samruk_detail, diagnose_samruk_keyword, search_samruk
 from .store import MatchStore
 
-SOURCE_TIMEOUT_SECONDS = 600
+SOURCE_TIMEOUT_SECONDS = 3600
 SOURCE_NAMES = ("ICPortal", "Samruk", "ERG", "Mitwork", "MP.kz", "GovZakup")
 
 
