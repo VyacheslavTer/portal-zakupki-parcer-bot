@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from multiprocessing import Process, Queue
 from queue import Empty
 from dataclasses import dataclass
@@ -22,6 +24,7 @@ from .store import MatchStore
 
 SOURCE_TIMEOUT_SECONDS = 3600
 SOURCE_NAMES = ("ICPortal", "Samruk", "ERG", "Mitwork", "MP.kz", "GovZakup")
+RECOVERY_RUN_ENV = "ICPORTAL_RECOVERY_RUN"
 
 
 @dataclass(frozen=True)
@@ -43,10 +46,13 @@ def run() -> None:
         _write_run_status(source_runs, matches, new_matches)
         report = _run_report(config, source_runs, matches, new_matches)
         failure_alert = _source_failure_alert(source_runs)
+        recovery_message = _source_failure_recovery_message(source_runs)
         if not new_matches:
             if config.telegram.enabled:
                 if failure_alert:
                     send_telegram_text(config.telegram, failure_alert)
+                if recovery_message:
+                    send_telegram_text(config.telegram, recovery_message)
                 send_telegram_text(config.telegram, report)
             print("Новых совпадений нет.")
             return
@@ -54,6 +60,8 @@ def run() -> None:
         if config.telegram.enabled:
             if failure_alert:
                 send_telegram_text(config.telegram, failure_alert)
+            if recovery_message:
+                send_telegram_text(config.telegram, recovery_message)
             for index, match in enumerate(new_matches, start=1):
                 send_telegram_match(config.telegram, match, index, len(new_matches))
                 store.mark_sent([match])
@@ -117,6 +125,34 @@ def _source_failure_alert(source_runs: list[SourceRun]) -> str:
         lines.append(f"{source_run.source}: {_short_error(source_run.error)}")
     lines.append("Остальные порталы проверены; результаты ниже могут быть неполными.")
     return "\n".join(lines)
+
+
+def _source_failure_recovery_message(source_runs: list[SourceRun]) -> str:
+    failed_runs = [source_run for source_run in source_runs if source_run.enabled and source_run.error]
+    if not failed_runs:
+        return ""
+    failed_sources = ", ".join(source_run.source for source_run in failed_runs)
+    if os.getenv(RECOVERY_RUN_ENV) == "1":
+        return (
+            "Автовосстановление уже выполнялось в этом прогоне; повторный запуск не создаю, "
+            f"чтобы не уйти в цикл. Источники с ошибками: {failed_sources}."
+        )
+    _start_recovery_run()
+    return f"Запущен автоматический повторный прогон из-за ошибок источников: {failed_sources}."
+
+
+def _start_recovery_run() -> None:
+    script = ROOT / "run_icportal_bot.bat"
+    env = os.environ.copy()
+    env[RECOVERY_RUN_ENV] = "1"
+    subprocess.Popen(
+        f'"{script}"',
+        cwd=str(ROOT),
+        env=env,
+        shell=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
 
 def _source_report_line(config, source_run: SourceRun, filtered_counts: dict[str, int], new_counts: dict[str, int]) -> str:

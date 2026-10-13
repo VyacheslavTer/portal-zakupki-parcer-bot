@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from icportal_bot.commands import SourceRun, _source_failure_alert, _search_with_retry
+from icportal_bot.commands import SourceRun, _source_failure_alert, _source_failure_recovery_message, _search_with_retry
 from icportal_bot.models import LotMatch
 
 
@@ -62,6 +62,30 @@ class SourceRetryTests(unittest.TestCase):
 
     def test_source_failure_alert_is_empty_when_all_enabled_sources_answered(self) -> None:
         self.assertEqual("", _source_failure_alert([SourceRun("MP.kz", True, [])]))
+
+    def test_source_failure_starts_recovery_run(self) -> None:
+        with patch("icportal_bot.commands._start_recovery_run") as start_recovery:
+            message = _source_failure_recovery_message([SourceRun("Samruk", True, [], "timeout")])
+
+        start_recovery.assert_called_once_with()
+        self.assertIn("Запущен автоматический повторный прогон", message)
+        self.assertIn("Samruk", message)
+
+    def test_recovery_run_does_not_start_another_recovery_run(self) -> None:
+        with patch.dict("os.environ", {"ICPORTAL_RECOVERY_RUN": "1"}):
+            with patch("icportal_bot.commands._start_recovery_run") as start_recovery:
+                message = _source_failure_recovery_message([SourceRun("ERG", True, [], "timeout")])
+
+        start_recovery.assert_not_called()
+        self.assertIn("не создаю", message)
+        self.assertIn("ERG", message)
+
+    def test_recovery_message_is_empty_when_all_enabled_sources_answered(self) -> None:
+        with patch("icportal_bot.commands._start_recovery_run") as start_recovery:
+            message = _source_failure_recovery_message([SourceRun("MP.kz", True, [])])
+
+        start_recovery.assert_not_called()
+        self.assertEqual("", message)
 
 
 if __name__ == "__main__":
